@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\BuildingBlocks\NB12.Boilerplate.BuildingBlocks.Api\NB12.Boilerplate.BuildingBlocks.Api.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\NB12.Boilerplate.BuildingBlocks.Application\NB12.Boilerplate.BuildingBlocks.Application.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\NB12.Boilerplate.BuildingBlocks.Infrastructure\NB12.Boilerplate.BuildingBlocks.Infrastructure.csproj" />
+    <ProjectReference Include="..\NB12.Boilerplate.Modules.Auth.Application\NB12.Boilerplate.Modules.Auth.Application.csproj" />
+  </ItemGroup>
+
+</Project>

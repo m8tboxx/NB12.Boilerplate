@@ -1,0 +1,28 @@
+<Solution>
+  <Folder Name="/src/" />
+  <Folder Name="/src/BuildingBlocks/">
+    <Project Path="src/BuildingBlocks/NB12.Boilerplate.BuildingBlocks.Api/NB12.Boilerplate.BuildingBlocks.Api.csproj" Id="13404334-5b75-47aa-b427-bd320367f4ac" />
+    <Project Path="src/BuildingBlocks/NB12.Boilerplate.BuildingBlocks.Application/NB12.Boilerplate.BuildingBlocks.Application.csproj" Id="6a201d17-206d-4cf6-bc53-b860d4d3caac" />
+    <Project Path="src/BuildingBlocks/NB12.Boilerplate.BuildingBlocks.Domain/NB12.Boilerplate.BuildingBlocks.Domain.csproj" Id="254a0cc2-72d1-4d4f-a9db-95d41cf3bdd5" />
+    <Project Path="src/BuildingBlocks/NB12.Boilerplate.BuildingBlocks.Infrastructure/NB12.Boilerplate.BuildingBlocks.Infrastructure.csproj" Id="30cda746-bb43-4305-b1b7-0926863df745" />
+  </Folder>
+  <Folder Name="/src/Host/">
+    <Project Path="src/Host/NB12.Boilerplate.Host.API/NB12.Boilerplate.Host.API.csproj" />
+    <Project Path="src/Host/NB12.Boilerplate.Host.Worker/NB12.Boilerplate.Host.Worker.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/" />
+  <Folder Name="/src/Modules/Audit/">
+    <Project Path="src/Modules/Audit/NB12.Boilerplate.Modules.Audit.Application/NB12.Boilerplate.Modules.Audit.Application.csproj" Id="bd1b2fca-1a9d-44bd-b5c0-14fb7e7a13d5" />
+    <Project Path="src/Modules/Audit/NB12.Boilerplate.Modules.Audit.Domain/NB12.Boilerplate.Modules.Audit.Domain.csproj" Id="4d8897dc-a4b0-41c9-aeba-773d628618f0" />
+    <Project Path="src/Modules/Audit/NB12.Boilerplate.Modules.Audit.Infrastructure/NB12.Boilerplate.Modules.Audit.Infrastructure.csproj" Id="4b9be315-f4fa-4c90-819b-9602ebcffad1" />
+  </Folder>
+  <Folder Name="/src/Modules/Auth/">
+    <Project Path="src/Modules/Auth/NB12.Boilerplate.Modules.Auth.Api/NB12.Boilerplate.Modules.Auth.Api.csproj" Id="2be631de-ced5-45bf-a225-54755b502936" />
+    <Project Path="src/Modules/Auth/NB12.Boilerplate.Modules.Auth.Application/NB12.Boilerplate.Modules.Auth.Application.csproj" Id="b3354a4e-916e-432a-91ec-cfde6df44244" />
+    <Project Path="src/Modules/Auth/NB12.Boilerplate.Modules.Auth.Domain/NB12.Boilerplate.Modules.Auth.Domain.csproj" />
+    <Project Path="src/Modules/Auth/NB12.Boilerplate.Modules.Auth.Infrastructure/NB12.Boilerplate.Modules.Auth.Infrastructure.csproj" Id="a065381b-8cfe-4fba-bc5c-0dbfcc0b8947" />
+  </Folder>
+  <Folder Name="/src/Modules/Platform/">
+    <Project Path="src/Modules/Platform/NB12.Boilerplate.Modules.Platform.Domain/NB12.Boilerplate.Modules.Platform.Domain.csproj" Id="94ed995e-5154-4a54-b96e-2cdcb6abb092" />
+  </Folder>
+</Solution>

@@ -1,0 +1,33 @@
+﻿namespace NB12.Boilerplate.Modules.Auth.Application.Security
+{
+    public static class Permissions
+    {
+        public static class Auth
+        {
+            public const string PermissionsRead = "auth.permissions.read";
+            public const string RolesRead = "auth.roles.read";
+            public const string RolesWrite = "auth.roles.write";
+            public const string UsersRolesRead = "auth.users.roles.read";
+            public const string UsersRolesWrite = "auth.users.roles.write";
+
+            public const string UsersWrite = "auth.users.write";
+
+            public const string MeRead = "auth.me.read";
+        }
+
+        public static IReadOnlyList<PermissionDefinition> All { get; } =
+        [
+            new(Auth.PermissionsRead, "Read permissions", "List available permissions.", "Auth"),
+
+            new(Auth.RolesRead, "Read roles", "List roles and their permissions.", "Auth"),
+            new(Auth.RolesWrite, "Manage roles", "Create/rename/delete roles and manage role permissions.", "Auth"),
+
+            new(Auth.UsersWrite, "Manage users", "Create users.", "Auth"),
+
+            new(Auth.UsersRolesRead, "Read user roles", "Read roles assigned to users.", "Auth"),
+            new(Auth.UsersRolesWrite, "Manage user roles", "Assign/remove roles to/from users.", "Auth"),
+
+            new(Auth.MeRead, "Read my profile", "Read current user's profile.", "Auth"),
+        ];
+    }
+}

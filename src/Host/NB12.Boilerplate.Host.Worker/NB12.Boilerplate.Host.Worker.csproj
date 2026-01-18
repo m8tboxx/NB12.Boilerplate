@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk.Worker">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>dotnet-NB12.Boilerplate.Host.Worker-28d5c8a8-4e73-440d-b1e8-48b8f4302693</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MediatR" Version="14.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\BuildingBlocks\NB12.Boilerplate.BuildingBlocks.Application\NB12.Boilerplate.BuildingBlocks.Application.csproj" />
+    <ProjectReference Include="..\..\BuildingBlocks\NB12.Boilerplate.BuildingBlocks.Domain\NB12.Boilerplate.BuildingBlocks.Domain.csproj" />
+    <ProjectReference Include="..\..\BuildingBlocks\NB12.Boilerplate.BuildingBlocks.Infrastructure\NB12.Boilerplate.BuildingBlocks.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Modules\Auth\NB12.Boilerplate.Modules.Auth.Infrastructure\NB12.Boilerplate.Modules.Auth.Infrastructure.csproj" />
+  </ItemGroup>
+</Project>

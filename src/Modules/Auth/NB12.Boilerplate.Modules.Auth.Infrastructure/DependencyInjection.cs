@@ -4,8 +4,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
-using NB12.Boilerplate.BuildingBlocks.Application.Interfaces;
-using NB12.Boilerplate.BuildingBlocks.Infrastructure.Auth;
+using NB12.Boilerplate.BuildingBlocks.Application.Security;
+using NB12.Boilerplate.BuildingBlocks.Infrastructure.Auditing;
+using NB12.Boilerplate.BuildingBlocks.Infrastructure.Persistence.Seeding;
 using NB12.Boilerplate.Modules.Auth.Application.Abstractions;
 using NB12.Boilerplate.Modules.Auth.Application.Interfaces;
 using NB12.Boilerplate.Modules.Auth.Application.Options;
@@ -46,12 +47,19 @@ namespace NB12.Boilerplate.Modules.Auth.Infrastructure
                 .ValidateDataAnnotations()
                 .ValidateOnStart();
 
-            services.AddDbContext<AuthDbContext>(options =>
+            services.AddOptions<AuthSeedingOptions>()
+               .Bind(configuration.GetSection(AuthSeedingOptions.SectionName))
+               .ValidateDataAnnotations()
+               .ValidateOnStart();
+
+            services.AddDbContext<AuthDbContext>((sp, options) =>
             {
                 options.UseNpgsql(connectionString, npgsql =>
                 {
                     npgsql.MigrationsAssembly(typeof(AuthDbContext).Assembly.FullName);
                 });
+
+                options.AddInterceptors(sp.GetRequiredService<AuditSaveChangesInterceptor>());
             });
 
             services.AddIdentityCore<ApplicationUser>(options =>
@@ -95,20 +103,9 @@ namespace NB12.Boilerplate.Modules.Auth.Infrastructure
                     options.Events = JwtStampValidator.CreateEvents();
                 });
 
-            services.AddAuthorization(options =>
-            {
-                options.FallbackPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder()
-                    .RequireAuthenticatedUser()
-                    .Build();
-            });
-
-            // Permissions policies (from code catalog)
-            services.AddSingleton<IPermissionCatalog, PermissionCatalog>();
-            services.AddPermissionPolicies(Permissions.All);
-
-            // CurrentUser (cross-cutting)
-            services.AddHttpContextAccessor();
-            services.AddScoped<ICurrentUser, CurrentUser>();
+            // Permissions policies (from providers across modules)
+            
+            services.AddSingleton<IPermissionProvider, AuthPermissionProvider>();
 
             // Auth services
             services.AddScoped<PermissionClaimsLoader>();

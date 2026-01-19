@@ -25,7 +25,7 @@ namespace NB12.Boilerplate.Modules.Auth.Api.Endpoints
             group.MapPost("/refresh", Refresh).AllowAnonymous();
             group.MapPost("/logout", Logout).RequireAuthorization();
             group.MapPost("/logoutEverywhere", LogoutEverywhere).RequireAuthorization();
-            group.MapGet("/me", GetMe).RequireAuthorization(Permissions.Auth.MeRead);
+            group.MapGet("/me", GetMe).RequireAuthorization(AuthPermissions.Auth.MeRead);
 
             return group;
         }

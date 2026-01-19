@@ -2,7 +2,7 @@
 
 namespace NB12.Boilerplate.BuildingBlocks.Domain.Common
 {
-    public abstract class BaseAuditableEntity<TId> : BaseEntity<TId>
+    public abstract class BaseAuditableEntity<TId> : BaseEntity<TId>, IAuditableEntity
         where TId : notnull
     {
         public DateTime CreatedAtUtc { get; private set; }
@@ -23,7 +23,7 @@ namespace NB12.Boilerplate.BuildingBlocks.Domain.Common
         public void SetCreated(DateTime utcNow, string? actor)
         {
             if (CreatedAtUtc != default)
-                return; // oder throw, wenn du harte Regeln willst
+                return; 
 
             CreatedAtUtc = utcNow;
             CreatedBy = actor;

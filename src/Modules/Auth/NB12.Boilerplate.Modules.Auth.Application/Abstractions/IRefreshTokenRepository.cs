@@ -9,5 +9,10 @@ namespace NB12.Boilerplate.Modules.Auth.Application.Abstractions
         void Update(RefreshToken token);
         Task RevokeAllForUserAsync(string userId, string reason, CancellationToken ct);
         Task RevokeAllForFamilyAsync(Guid familyId, string reason, CancellationToken ct);
+        Task<RefreshTokenRotationResult> RotateAsync(
+            string currentTokenHash,
+            string newTokenHash,
+            DateTimeOffset newExpiresAt,
+            CancellationToken ct);
     }
 }

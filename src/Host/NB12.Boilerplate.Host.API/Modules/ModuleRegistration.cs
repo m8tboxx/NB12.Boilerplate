@@ -1,6 +1,8 @@
 ﻿using NB12.Boilerplate.BuildingBlocks.Application.Interfaces;
+using NB12.Boilerplate.Modules.Audit.Infrastructure;
 using NB12.Boilerplate.Modules.Auth.Api;
 using NB12.Boilerplate.Modules.Auth.Infrastructure;
+using NB12.Boilerplate.Modules.Audit.Api;
 
 namespace NB12.Boilerplate.Host.API.Modules
 {
@@ -8,6 +10,7 @@ namespace NB12.Boilerplate.Host.API.Modules
     {
         public static IModuleServices[] ServiceModules() =>
         [
+            new AuditServicesModule(),
             new AuthServicesModule(),
             new AuthApiServicesModule(),
             // further Modules …
@@ -17,6 +20,7 @@ namespace NB12.Boilerplate.Host.API.Modules
         [
             new AuthEndpointsModule(),
             new AuthAdminEndpointsModule(),
+            new AuditEndpointsModule(),
             // further Modules …
         ];
     }

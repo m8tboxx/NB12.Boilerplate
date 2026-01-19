@@ -2,11 +2,10 @@
 using Microsoft.Extensions.Options;
 using NB12.Boilerplate.BuildingBlocks.Domain.Common;
 using NB12.Boilerplate.Modules.Auth.Application.Abstractions;
+using NB12.Boilerplate.Modules.Auth.Application.Enums;
 using NB12.Boilerplate.Modules.Auth.Application.Interfaces;
 using NB12.Boilerplate.Modules.Auth.Application.Options;
 using NB12.Boilerplate.Modules.Auth.Application.Responses;
-using NB12.Boilerplate.Modules.Auth.Domain.Entities;
-using NB12.Boilerplate.Modules.Auth.Domain.Ids;
 
 namespace NB12.Boilerplate.Modules.Auth.Application.Commands.Refresh
 {
@@ -41,46 +40,39 @@ namespace NB12.Boilerplate.Modules.Auth.Application.Commands.Refresh
                 return Result<RefreshTokenResponse>.Fail(Error.Unauthorized("auth.refresh_missing", "Missing refresh token"));
 
             var incomingHash = _tokens.HashRefreshToken(request.RefreshToken);
-            var stored = await _refreshRepo.GetByHashAsync(incomingHash, ct);
 
-            if (stored is null || stored.IsExpired)
+            // Neue Refresh Token Daten schon jetzt erzeugen (für Rotation)
+            var newRefreshRaw = _tokens.CreateRefreshToken();
+            var newRefreshHash = _tokens.HashRefreshToken(newRefreshRaw);
+            var newRefreshExpires = DateTimeOffset.UtcNow.AddDays(_refresh.RefreshTokenDays);
+
+            var rotation = await _refreshRepo.RotateAsync(incomingHash, newRefreshHash, newRefreshExpires, ct);
+
+            if (rotation.Status == RefreshTokenRotationStatus.InvalidOrExpired)
                 return Result<RefreshTokenResponse>.Fail(Error.Unauthorized("auth.refresh_invalid", "Invalid refresh token"));
 
-            // Reuse / Replay detection:
-            // Token existiert, ist aber bereits revoked (typisch: rotiert, logout, compromise)
-            if (stored.IsRevoked)
+            if (rotation.Status == RefreshTokenRotationStatus.ReuseDetected)
             {
-                // Kill all refresh tokens for this user (minimal but safe)
-                await _refreshRepo.RevokeAllForFamilyAsync(stored.FamilyId, "Refresh token reuse detected", ct);
-                
-                // Optional, aber stark empfohlen: Access Tokens sofort invalidieren
-                // (du prüfst 'sst' gegen SecurityStamp im JWT OnTokenValidated)
-                await _identity.InvalidateUserTokensAsync(stored.UserId, ct);
+                if (rotation.FamilyId is not null)
+                    await _refreshRepo.RevokeAllForFamilyAsync(rotation.FamilyId.Value, "Refresh token reuse detected", ct);
 
-                await _uow.SaveChangesAsync(ct);
+                if (!string.IsNullOrWhiteSpace(rotation.UserId))
+                    await _identity.InvalidateUserTokensAsync(rotation.UserId!, ct);
 
                 return Result<RefreshTokenResponse>.Fail(
                     Error.Unauthorized("auth.refresh_reuse", "Refresh token reuse detected"));
             }
 
-            var tokenDataRes = await _identity.GetUserTokenDataAsync(stored.UserId, ct);
+            // Rotated: Access Token erstellen
+            var tokenDataRes = await _identity.GetUserTokenDataAsync(rotation.UserId!, ct);
             if (tokenDataRes.IsFailure)
                 return Result<RefreshTokenResponse>.Fail(tokenDataRes.Errors);
 
             var access = _tokens.CreateAccessToken(tokenDataRes.Value);
             var accessExpires = DateTimeOffset.UtcNow.AddMinutes(_jwt.AccessTokenMinutes);
 
-            var newRefreshRaw = _tokens.CreateRefreshToken();
-            var newRefreshHash = _tokens.HashRefreshToken(newRefreshRaw);
-            var newRefreshExpires = DateTimeOffset.UtcNow.AddDays(_refresh.RefreshTokenDays);
-
-            stored.RotateTo(newRefreshHash);
-            _refreshRepo.Update(stored);
-
-            await _refreshRepo.AddAsync(new RefreshToken(RefreshTokenId.New(), stored.UserId, stored.FamilyId, newRefreshHash, newRefreshExpires), ct);
-            await _uow.SaveChangesAsync(ct);
-
-            return Result<RefreshTokenResponse>.Success(new RefreshTokenResponse(access, accessExpires, newRefreshRaw));
+            return Result<RefreshTokenResponse>.Success(
+                new RefreshTokenResponse(access, accessExpires, newRefreshRaw));
         }
     }
 }

@@ -6,4 +6,25 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.2">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\BuildingBlocks\NB12.Boilerplate.BuildingBlocks.Application\NB12.Boilerplate.BuildingBlocks.Application.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\NB12.Boilerplate.BuildingBlocks.Infrastructure\NB12.Boilerplate.BuildingBlocks.Infrastructure.csproj" />
+    <ProjectReference Include="..\NB12.Boilerplate.Modules.Audit.Application\NB12.Boilerplate.Modules.Audit.Application.csproj" />
+    <ProjectReference Include="..\NB12.Boilerplate.Modules.Audit.Domain\NB12.Boilerplate.Modules.Audit.Domain.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Persistence\Configuration\" />
+    <Folder Include="Persistence\Migrations\" />
+    <Folder Include="Persistence\Seeding\" />
+  </ItemGroup>
+
 </Project>

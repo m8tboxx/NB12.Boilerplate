@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Identity;
+using NB12.Boilerplate.BuildingBlocks.Application.Security;
 using NB12.Boilerplate.BuildingBlocks.Domain.Common;
 using NB12.Boilerplate.Modules.Auth.Application.Interfaces;
-using NB12.Boilerplate.Modules.Auth.Application.Security;
 using NB12.Boilerplate.Modules.Auth.Infrastructure.Models;
 using System.Security.Claims;
 

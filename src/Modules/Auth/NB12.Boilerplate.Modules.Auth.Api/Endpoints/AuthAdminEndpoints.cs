@@ -29,49 +29,49 @@ namespace NB12.Boilerplate.Modules.Auth.Api.Endpoints
 
             // Permissions catalog (DB)
             group.MapGet("/permissions", GetPermissions)
-                .RequireAuthorization(Permissions.Auth.PermissionsRead);
+                .RequireAuthorization(AuthPermissions.Auth.PermissionsRead);
 
             // Roles
             group.MapGet("/roles", GetRoles)
-                .RequireAuthorization(Permissions.Auth.RolesRead);
+                .RequireAuthorization(AuthPermissions.Auth.RolesRead);
 
             group.MapPost("/roles", CreateRole)
-                .RequireAuthorization(Permissions.Auth.RolesWrite);
+                .RequireAuthorization(AuthPermissions.Auth.RolesWrite);
 
             group.MapPatch("/roles/{roleId}", RenameRole)
-                .RequireAuthorization(Permissions.Auth.RolesWrite);
+                .RequireAuthorization(AuthPermissions.Auth.RolesWrite);
 
             group.MapDelete("/roles/{roleId}", DeleteRole)
-                .RequireAuthorization(Permissions.Auth.RolesWrite);
+                .RequireAuthorization(AuthPermissions.Auth.RolesWrite);
 
             // Role permissions
             group.MapGet("/roles/{roleId}/permissions", GetRolePermissions)
-                .RequireAuthorization(Permissions.Auth.RolesRead);
+                .RequireAuthorization(AuthPermissions.Auth.RolesRead);
 
             group.MapPut("/roles/{roleId}/permissions", SetRolePermissions)
-                .RequireAuthorization(Permissions.Auth.RolesWrite);
+                .RequireAuthorization(AuthPermissions.Auth.RolesWrite);
 
             group.MapPost("/roles/{roleId}/permissions:add", AddRolePermissions)
-                .RequireAuthorization(Permissions.Auth.RolesWrite);
+                .RequireAuthorization(AuthPermissions.Auth.RolesWrite);
 
             group.MapPost("/roles/{roleId}/permissions:remove", RemoveRolePermissions)
-                .RequireAuthorization(Permissions.Auth.RolesWrite);
+                .RequireAuthorization(AuthPermissions.Auth.RolesWrite);
 
             // Users
             group.MapPost("/users", CreateUser)
-                .RequireAuthorization(Permissions.Auth.UsersWrite);
+                .RequireAuthorization(AuthPermissions.Auth.UsersWrite);
 
             group.MapGet("/users/{userId}/roles", GetUserRoles)
-                .RequireAuthorization(Permissions.Auth.UsersRolesRead);
+                .RequireAuthorization(AuthPermissions.Auth.UsersRolesRead);
 
             group.MapPost("/users/{userId}/roles:add", AddUserRole)
-                .RequireAuthorization(Permissions.Auth.UsersRolesWrite);
+                .RequireAuthorization(AuthPermissions.Auth.UsersRolesWrite);
 
             group.MapPost("/users/{userId}/roles:remove", RemoveUserRole)
-                .RequireAuthorization(Permissions.Auth.UsersRolesWrite);
+                .RequireAuthorization(AuthPermissions.Auth.UsersRolesWrite);
 
             group.MapGet("/users/{userId}/permissions", GetUserPermissions)
-                .RequireAuthorization(Permissions.Auth.UsersRolesRead);
+                .RequireAuthorization(AuthPermissions.Auth.UsersRolesRead);
 
             return group;
         }

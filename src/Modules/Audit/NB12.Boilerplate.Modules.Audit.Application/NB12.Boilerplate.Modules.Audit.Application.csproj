@@ -6,4 +6,10 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\BuildingBlocks\NB12.Boilerplate.BuildingBlocks.Application\NB12.Boilerplate.BuildingBlocks.Application.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\NB12.Boilerplate.BuildingBlocks.Domain\NB12.Boilerplate.BuildingBlocks.Domain.csproj" />
+    <ProjectReference Include="..\NB12.Boilerplate.Modules.Audit.Domain\NB12.Boilerplate.Modules.Audit.Domain.csproj" />
+  </ItemGroup>
+
 </Project>

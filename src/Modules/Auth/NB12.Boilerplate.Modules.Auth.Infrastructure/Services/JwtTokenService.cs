@@ -1,9 +1,9 @@
 ﻿using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using NB12.Boilerplate.BuildingBlocks.Application.Security;
 using NB12.Boilerplate.Modules.Auth.Application.Contracts;
 using NB12.Boilerplate.Modules.Auth.Application.Interfaces;
 using NB12.Boilerplate.Modules.Auth.Application.Options;
-using NB12.Boilerplate.Modules.Auth.Application.Security;
 using NB12.Boilerplate.Modules.Auth.Infrastructure.Security;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;

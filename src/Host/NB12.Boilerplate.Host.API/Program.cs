@@ -1,14 +1,26 @@
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using NB12.Boilerplate.BuildingBlocks.Api.Extensions;
 using NB12.Boilerplate.BuildingBlocks.Application.Behaviors;
 using NB12.Boilerplate.BuildingBlocks.Application.Modularity;
 using NB12.Boilerplate.BuildingBlocks.Application.Validation;
+using NB12.Boilerplate.BuildingBlocks.Infrastructure;
 using NB12.Boilerplate.Host.API.Modules;
 using NB12.Boilerplate.Host.API.OpenApi;
 using NB12.Boilerplate.Modules.Auth.Infrastructure.Persistence.Seeding;
 using Scalar.AspNetCore;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Serilog
+builder.Host.UseSerilog((ctx, services, cfg) =>
+    cfg.ReadFrom.Configuration(ctx.Configuration)
+       .ReadFrom.Services(services)
+       .Enrich.FromLogContext());
+
+// Cross-cutting infrastructure (CurrentUser, dynamic permission policies, etc.)
+builder.Services.AddInfrastructureBuildingBlocks();
 
 // Module Loading
 var serviceModules = ModuleRegistration.ServiceModules();
@@ -25,11 +37,18 @@ builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssemblies(ModuleCatalog.GetApplicationAssemblies(serviceModules));
 });
 
+builder.Services.AddAuthorization(options =>
+{
+    options.FallbackPolicy = new AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser()
+        .Build();
+});
+
 // Global Pipeline
 builder.Services.AddValidatorsFromAssemblies(ModuleCatalog.GetApplicationAssemblies(serviceModules));
 builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 // builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(AuthorizationBehavior<,>));
-// builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(AuditBehavior<,>));
+builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(AuditBehavior<,>));
 
 builder.Services.AddOpenApi(options =>
 {
@@ -42,13 +61,8 @@ builder.Services.AddApiBuildingBlocks();
 
 var app = builder.Build();
 
+app.UseSerilogRequestLogging();
 app.UseApiBuildingBlocks();
-
-using (var scope = app.Services.CreateScope())
-{
-    var seeder = scope.ServiceProvider.GetRequiredService<AuthSeeder>();
-    await seeder.SeedAsync();
-}
 
 foreach (var module in endpointModules)
 {
@@ -61,10 +75,14 @@ if (app.Environment.IsDevelopment())
     app.MapScalarApiReference("/docs", options =>
     {
         options
-        .WithTheme(ScalarTheme.BluePlanet)
+        .WithTheme(ScalarTheme.DeepSpace)
         .WithTitle("NB12 Boilerplate API")
         .WithDefaultHttpClient(ScalarTarget.CSharp, ScalarClient.HttpClient);
     }).AllowAnonymous();
+
+    using var scope = app.Services.CreateScope();
+    var seeder = scope.ServiceProvider.GetRequiredService<AuthSeeder>();
+    await seeder.SeedAsync();
 }
 
 app.UseAuthentication();

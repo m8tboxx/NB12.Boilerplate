@@ -11,10 +11,10 @@ foreach (var module in serviceModules)
     module.AddModule(builder.Services, builder.Configuration);
 }
 
-builder.Services.AddMediatR(cfg =>
-{
-    cfg.RegisterServicesFromAssemblies(ModuleCatalog.GetApplicationAssemblies(serviceModules));
-});
+//builder.Services.AddMediatR(cfg =>
+//{
+//    cfg.RegisterServicesFromAssemblies(ModuleCatalog.GetApplicationAssemblies(serviceModules));
+//});
 
 
 builder.Services.AddHostedService<Worker>();

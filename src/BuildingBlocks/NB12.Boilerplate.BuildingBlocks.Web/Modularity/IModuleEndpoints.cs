@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Routing;
 
-namespace NB12.Boilerplate.BuildingBlocks.Application.Interfaces
+namespace NB12.Boilerplate.BuildingBlocks.Web.Modularity
 {
     public interface IModuleEndpoints
     {

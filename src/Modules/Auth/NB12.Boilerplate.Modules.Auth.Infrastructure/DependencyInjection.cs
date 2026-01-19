@@ -104,7 +104,6 @@ namespace NB12.Boilerplate.Modules.Auth.Infrastructure
                 });
 
             // Permissions policies (from providers across modules)
-            
             services.AddSingleton<IPermissionProvider, AuthPermissionProvider>();
 
             // Auth services

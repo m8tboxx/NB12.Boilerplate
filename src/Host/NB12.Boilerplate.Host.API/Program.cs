@@ -22,9 +22,16 @@ builder.Host.UseSerilog((ctx, services, cfg) =>
 // Cross-cutting infrastructure (CurrentUser, dynamic permission policies, etc.)
 builder.Services.AddInfrastructureBuildingBlocks();
 
+builder.Services.AddSingleton<ModuleCatalog>();
+
 // Module Loading
 var serviceModules = ModuleRegistration.ServiceModules();
 var endpointModules = ModuleRegistration.EndpointModules();
+
+var moduleAssemblies = serviceModules
+    .Select(m => m.ApplicationAssembly)
+    .Distinct()
+    .ToArray();
 
 // Module DI
 foreach(var module in serviceModules)
@@ -34,7 +41,7 @@ foreach(var module in serviceModules)
 
 builder.Services.AddMediatR(cfg =>
 {
-    cfg.RegisterServicesFromAssemblies(ModuleCatalog.GetApplicationAssemblies(serviceModules));
+    cfg.RegisterServicesFromAssemblies(moduleAssemblies);
 });
 
 builder.Services.AddAuthorization(options =>
@@ -45,7 +52,7 @@ builder.Services.AddAuthorization(options =>
 });
 
 // Global Pipeline
-builder.Services.AddValidatorsFromAssemblies(ModuleCatalog.GetApplicationAssemblies(serviceModules));
+builder.Services.AddValidatorsFromAssemblies(moduleAssemblies);
 builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 // builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(AuthorizationBehavior<,>));
 builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(AuditBehavior<,>));
@@ -63,6 +70,9 @@ var app = builder.Build();
 
 app.UseSerilogRequestLogging();
 app.UseApiBuildingBlocks();
+app.UseHttpsRedirection();
+app.UseAuthentication();
+app.UseAuthorization();
 
 foreach (var module in endpointModules)
 {
@@ -84,11 +94,6 @@ if (app.Environment.IsDevelopment())
     var seeder = scope.ServiceProvider.GetRequiredService<AuthSeeder>();
     await seeder.SeedAsync();
 }
-
-app.UseAuthentication();
-app.UseAuthorization();
-
-app.UseHttpsRedirection();
 
 app.Run();
 

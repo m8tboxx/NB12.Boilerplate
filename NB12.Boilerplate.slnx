@@ -5,6 +5,7 @@
     <Project Path="src/BuildingBlocks/NB12.Boilerplate.BuildingBlocks.Application/NB12.Boilerplate.BuildingBlocks.Application.csproj" Id="6a201d17-206d-4cf6-bc53-b860d4d3caac" />
     <Project Path="src/BuildingBlocks/NB12.Boilerplate.BuildingBlocks.Domain/NB12.Boilerplate.BuildingBlocks.Domain.csproj" Id="254a0cc2-72d1-4d4f-a9db-95d41cf3bdd5" />
     <Project Path="src/BuildingBlocks/NB12.Boilerplate.BuildingBlocks.Infrastructure/NB12.Boilerplate.BuildingBlocks.Infrastructure.csproj" Id="30cda746-bb43-4305-b1b7-0926863df745" />
+    <Project Path="src/BuildingBlocks/NB12.Boilerplate.BuildingBlocks.Web/NB12.Boilerplate.BuildingBlocks.Web.csproj" Id="3fc3b16c-3169-42b7-8c93-6b2f3baf6bf0" />
   </Folder>
   <Folder Name="/src/Host/">
     <Project Path="src/Host/NB12.Boilerplate.Host.API/NB12.Boilerplate.Host.API.csproj" />

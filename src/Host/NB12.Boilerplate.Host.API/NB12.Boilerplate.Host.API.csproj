@@ -25,6 +25,7 @@
     <ProjectReference Include="..\..\BuildingBlocks\NB12.Boilerplate.BuildingBlocks.Api\NB12.Boilerplate.BuildingBlocks.Api.csproj" />
     <ProjectReference Include="..\..\BuildingBlocks\NB12.Boilerplate.BuildingBlocks.Application\NB12.Boilerplate.BuildingBlocks.Application.csproj" />
     <ProjectReference Include="..\..\BuildingBlocks\NB12.Boilerplate.BuildingBlocks.Domain\NB12.Boilerplate.BuildingBlocks.Domain.csproj" />
+    <ProjectReference Include="..\..\BuildingBlocks\NB12.Boilerplate.BuildingBlocks.Web\NB12.Boilerplate.BuildingBlocks.Web.csproj" />
     <ProjectReference Include="..\..\Modules\Audit\NB12.Boilerplate.Modules.Audit.Api\NB12.Boilerplate.Modules.Audit.Api.csproj" />
     <ProjectReference Include="..\..\Modules\Audit\NB12.Boilerplate.Modules.Audit.Infrastructure\NB12.Boilerplate.Modules.Audit.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Modules\Auth\NB12.Boilerplate.Modules.Auth.Api\NB12.Boilerplate.Modules.Auth.Api.csproj" />

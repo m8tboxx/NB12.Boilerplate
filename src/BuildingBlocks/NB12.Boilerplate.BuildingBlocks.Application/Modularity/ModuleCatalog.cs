@@ -1,11 +1,15 @@
-﻿using NB12.Boilerplate.BuildingBlocks.Application.Interfaces;
-using System.Reflection;
+﻿using System.Reflection;
 
 namespace NB12.Boilerplate.BuildingBlocks.Application.Modularity
 {
-    public static class ModuleCatalog
+    public sealed class ModuleCatalog
     {
-        public static Assembly[] GetApplicationAssemblies(IEnumerable<IModuleServices> modules)
-            => [.. modules.Select(m => m.ApplicationAssembly).Distinct()];
+        private readonly IEnumerable<IModuleDefinition> _modules;
+
+        public ModuleCatalog(IEnumerable<IModuleDefinition> modules)
+            => _modules = modules;
+
+        public IReadOnlyList<Assembly> GetApplicationAssemblies()
+            => [.. _modules.Select(m => m.ApplicationAssembly).Distinct()];
     }
 }

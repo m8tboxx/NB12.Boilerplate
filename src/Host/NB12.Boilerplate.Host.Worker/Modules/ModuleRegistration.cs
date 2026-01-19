@@ -1,4 +1,4 @@
-﻿using NB12.Boilerplate.BuildingBlocks.Application.Interfaces;
+﻿using NB12.Boilerplate.BuildingBlocks.Web.Modularity;
 
 namespace NB12.Boilerplate.Host.Worker.Modules
 {

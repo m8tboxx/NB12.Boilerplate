@@ -2,9 +2,9 @@
 using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
 
-namespace NB12.Boilerplate.BuildingBlocks.Application.Interfaces
+namespace NB12.Boilerplate.BuildingBlocks.Application.Modularity
 {
-    public interface IModuleServices
+    public interface IModuleDefinition
     {
         string Name { get; }
         Assembly ApplicationAssembly { get; }

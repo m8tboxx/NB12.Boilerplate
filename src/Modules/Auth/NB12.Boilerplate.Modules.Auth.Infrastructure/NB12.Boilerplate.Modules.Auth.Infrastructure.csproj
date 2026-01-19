@@ -18,6 +18,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\BuildingBlocks\NB12.Boilerplate.BuildingBlocks.Application\NB12.Boilerplate.BuildingBlocks.Application.csproj" />
     <ProjectReference Include="..\..\..\BuildingBlocks\NB12.Boilerplate.BuildingBlocks.Infrastructure\NB12.Boilerplate.BuildingBlocks.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\NB12.Boilerplate.BuildingBlocks.Web\NB12.Boilerplate.BuildingBlocks.Web.csproj" />
     <ProjectReference Include="..\NB12.Boilerplate.Modules.Auth.Application\NB12.Boilerplate.Modules.Auth.Application.csproj" />
     <ProjectReference Include="..\NB12.Boilerplate.Modules.Auth.Domain\NB12.Boilerplate.Modules.Auth.Domain.csproj" />
   </ItemGroup>

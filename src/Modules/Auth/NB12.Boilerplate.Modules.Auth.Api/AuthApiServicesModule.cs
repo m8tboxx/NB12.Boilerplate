@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using NB12.Boilerplate.BuildingBlocks.Application.Interfaces;
+using NB12.Boilerplate.BuildingBlocks.Web.Modularity;
 using NB12.Boilerplate.Modules.Auth.Api.Cookies;
 using NB12.Boilerplate.Modules.Auth.Application;
 using System.Reflection;

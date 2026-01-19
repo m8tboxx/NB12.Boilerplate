@@ -1,8 +1,8 @@
-﻿using NB12.Boilerplate.BuildingBlocks.Application.Interfaces;
-using NB12.Boilerplate.Modules.Audit.Infrastructure;
+﻿using NB12.Boilerplate.Modules.Audit.Infrastructure;
 using NB12.Boilerplate.Modules.Auth.Api;
 using NB12.Boilerplate.Modules.Auth.Infrastructure;
 using NB12.Boilerplate.Modules.Audit.Api;
+using NB12.Boilerplate.BuildingBlocks.Web.Modularity;
 
 namespace NB12.Boilerplate.Host.API.Modules
 {

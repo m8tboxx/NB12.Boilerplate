@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 
-namespace NB12.Boilerplate.BuildingBlocks.Application.Security
+namespace NB12.Boilerplate.BuildingBlocks.Web.Security
 {
     public sealed class PermissionRequirement : IAuthorizationRequirement
     {

@@ -38,14 +38,11 @@ namespace NB12.Boilerplate.Modules.Auth.Application.Commands.CreateUser
                 utcNow: DateTime.UtcNow,
                 actor: "admin");
 
-            await _profiles.AddAsync(profile, ct);
-
-            // optional: default role
-            await _identity.AddUserToRoleAsync(userId, "User", ct);
-
-            await _uow.SaveChangesAsync(ct);
-
             profile.AddDomainEvent(new UserProfileCreatedDomainEvent(profile.Id, profile.IdentityUserId, profile.Email));
+
+            await _profiles.AddAsync(profile, ct);
+            await _identity.AddUserToRoleAsync(userId, "User", ct);
+            await _uow.SaveChangesAsync(ct);
 
             return Result<string>.Success(userId);
         }

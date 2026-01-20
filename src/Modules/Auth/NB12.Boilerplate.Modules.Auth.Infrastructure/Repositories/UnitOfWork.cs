@@ -14,6 +14,7 @@ namespace NB12.Boilerplate.Modules.Auth.Infrastructure.Repositories
 
         public Task<int> SaveChangesAsync(CancellationToken ct)
         {
+            Console.WriteLine($">>> UOW SaveChanges on: {_authDbContext.GetType().FullName}");
             return _authDbContext.SaveChangesAsync(ct);
         }
     }

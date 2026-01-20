@@ -2,9 +2,9 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using NB12.Boilerplate.BuildingBlocks.Application.Security;
-using NB12.Boilerplate.BuildingBlocks.Infrastructure.Persistence.Seeding;
 using NB12.Boilerplate.Modules.Auth.Application.Security;
 using NB12.Boilerplate.Modules.Auth.Infrastructure.Models;
+using NB12.Boilerplate.Modules.Auth.Infrastructure.Persistence.Options;
 using System.Security.Claims;
 
 namespace NB12.Boilerplate.Modules.Auth.Infrastructure.Persistence.Seeding

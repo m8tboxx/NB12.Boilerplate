@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Persistence.Seeding
+namespace NB12.Boilerplate.Modules.Auth.Infrastructure.Persistence.Options
 {
     public sealed class AuthSeedingOptions
     {

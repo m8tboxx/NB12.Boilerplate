@@ -4,7 +4,6 @@ using NB12.Boilerplate.BuildingBlocks.Application.Interfaces;
 using NB12.Boilerplate.BuildingBlocks.Application.Security;
 using NB12.Boilerplate.BuildingBlocks.Infrastructure.Auditing;
 using NB12.Boilerplate.BuildingBlocks.Infrastructure.Auth;
-using NB12.Boilerplate.Modules.Auth.Application.Security;
 
 namespace NB12.Boilerplate.BuildingBlocks.Infrastructure
 {

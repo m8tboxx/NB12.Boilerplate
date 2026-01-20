@@ -1,4 +1,4 @@
-﻿using NB12.Boilerplate.BuildingBlocks.Domain.Interfaces;
+﻿using NB12.Boilerplate.BuildingBlocks.Domain.Events;
 
 namespace NB12.Boilerplate.BuildingBlocks.Domain.Common
 {

@@ -42,7 +42,7 @@ namespace NB12.Boilerplate.Modules.Auth.Api.Endpoints
             return result.ToHttpResult(http, value =>
             {
                 cookies.Set(http.Response, value.RefreshToken);
-                return Results.Ok(new { value.AccessToken, value.AccessTokenExpiresAt, value.RefreshToken });
+                return Results.Ok(new { value.AccessToken, value.AccessTokenExpiresAt });
             });
         }
 

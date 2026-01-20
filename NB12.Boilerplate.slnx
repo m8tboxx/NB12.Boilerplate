@@ -24,4 +24,7 @@
     <Project Path="src/Modules/Auth/NB12.Boilerplate.Modules.Auth.Domain/NB12.Boilerplate.Modules.Auth.Domain.csproj" />
     <Project Path="src/Modules/Auth/NB12.Boilerplate.Modules.Auth.Infrastructure/NB12.Boilerplate.Modules.Auth.Infrastructure.csproj" Id="a065381b-8cfe-4fba-bc5c-0dbfcc0b8947" />
   </Folder>
+  <Folder Name="/src/Tests/">
+    <Project Path="src/Tests/NB12.Boilerplate.Host.Api.IntegrationTests/NB12.Boilerplate.Host.Api.IntegrationTests.csproj" Id="9123524a-1817-41af-b996-d5587390fd24" />
+  </Folder>
 </Solution>

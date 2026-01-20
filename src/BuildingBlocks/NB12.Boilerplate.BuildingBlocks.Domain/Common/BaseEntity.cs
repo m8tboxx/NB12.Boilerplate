@@ -2,7 +2,7 @@
 
 namespace NB12.Boilerplate.BuildingBlocks.Domain.Common
 {
-    public abstract class BaseEntity<TId>
+    public abstract class BaseEntity<TId> : IHasDomainEvents
         where TId : notnull
     {
         public TId Id { get; protected set; } = default!;

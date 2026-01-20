@@ -4,9 +4,12 @@ using NB12.Boilerplate.BuildingBlocks.Api.Middleware;
 using NB12.Boilerplate.BuildingBlocks.Api.Middleware.ETag;
 using NB12.Boilerplate.BuildingBlocks.Application.Behaviors;
 using NB12.Boilerplate.BuildingBlocks.Application.Eventing;
+using NB12.Boilerplate.BuildingBlocks.Application.Messaging;
+using NB12.Boilerplate.BuildingBlocks.Application.Messaging.Abstractions;
 using NB12.Boilerplate.BuildingBlocks.Application.Modularity;
 using NB12.Boilerplate.BuildingBlocks.Application.Validation;
 using NB12.Boilerplate.BuildingBlocks.Infrastructure;
+using NB12.Boilerplate.BuildingBlocks.Infrastructure.EventBus;
 using NB12.Boilerplate.Host.API.Modules;
 using NB12.Boilerplate.Host.API.OpenApi;
 using NB12.Boilerplate.Modules.Auth.Infrastructure.Persistence.Seeding;
@@ -14,8 +17,6 @@ using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Scalar.AspNetCore;
 using Serilog;
-using NB12.Boilerplate.BuildingBlocks.Application.Messaging;
-using NB12.Boilerplate.BuildingBlocks.Application.Messaging.Abstractions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -26,9 +27,6 @@ builder.Host.UseSerilog((ctx, services, cfg) =>
     cfg.ReadFrom.Configuration(ctx.Configuration)
        .ReadFrom.Services(services)
        .Enrich.FromLogContext());
-
-// Cross-cutting infrastructure (CurrentUser, dynamic permission policies, etc.)
-builder.Services.AddInfrastructureBuildingBlocks();
 
 builder.Services.AddSingleton<ModuleCatalog>();
 
@@ -41,14 +39,16 @@ var moduleAssemblies = serviceModules
     .Distinct()
     .ToArray();
 
+// Cross-cutting infrastructure (CurrentUser, dynamic permission policies, etc.)
+builder.Services.AddInfrastructureBuildingBlocks(moduleAssemblies);
+
 // Module DI
-foreach(var module in serviceModules)
+foreach (var module in serviceModules)
 {
     module.AddModule(builder.Services, builder.Configuration);
 }
 
 builder.Services.AddMessaging(moduleAssemblies);
-
 
 builder.Services.AddAuthorization(options =>
 {

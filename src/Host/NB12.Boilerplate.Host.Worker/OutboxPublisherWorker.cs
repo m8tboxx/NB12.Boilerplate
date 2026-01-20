@@ -8,12 +8,9 @@ using System.Text.Json;
 namespace NB12.Boilerplate.Host.Worker
 {
     public sealed class OutboxPublisherWorker(
-    IEnumerable<IModuleOutboxStore> stores,
-    IEventBus bus,
-    IntegrationEventTypeRegistry registry,
-    JsonSerializerOptions json,
-    IOptions<OutboxOptions> options,
-    ILogger<OutboxPublisherWorker> logger) : BackgroundService
+        IServiceScopeFactory scopeFactory,
+        IOptions<OutboxOptions> options,
+        ILogger<OutboxPublisherWorker> logger) : BackgroundService
     {
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
@@ -24,6 +21,13 @@ namespace NB12.Boilerplate.Host.Worker
             {
                 try
                 {
+                    using var scope = scopeFactory.CreateScope();
+
+                    var stores = scope.ServiceProvider.GetServices<IModuleOutboxStore>();
+                    var bus = scope.ServiceProvider.GetRequiredService<IEventBus>();
+                    var registry = scope.ServiceProvider.GetRequiredService<IntegrationEventTypeRegistry>();
+                    var json = scope.ServiceProvider.GetRequiredService<JsonSerializerOptions>();
+
                     foreach (var store in stores)
                     {
                         var msgs = await store.GetUnprocessed(batchSize, stoppingToken);
@@ -44,7 +48,10 @@ namespace NB12.Boilerplate.Host.Worker
                             }
                             catch (Exception ex)
                             {
-                                logger.LogError(ex, "Outbox publish failed. Module={Module} MsgId={MsgId} Type={Type}", store.Module, msg.Id, msg.Type);
+                                logger.LogError(ex,
+                                    "Outbox publish failed. Module={Module} MsgId={MsgId} Type={Type}",
+                                    store.Module, msg.Id, msg.Type);
+
                                 await store.MarkFailed(msg, DateTime.UtcNow, ex, stoppingToken);
                             }
                         }

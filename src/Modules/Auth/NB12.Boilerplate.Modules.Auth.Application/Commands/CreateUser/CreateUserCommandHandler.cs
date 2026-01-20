@@ -1,8 +1,9 @@
-﻿using MediatR;
+﻿using NB12.Boilerplate.BuildingBlocks.Application.Messaging.Abstractions;
 using NB12.Boilerplate.BuildingBlocks.Domain.Common;
 using NB12.Boilerplate.Modules.Auth.Application.Abstractions;
 using NB12.Boilerplate.Modules.Auth.Application.Interfaces;
 using NB12.Boilerplate.Modules.Auth.Domain.Entities;
+using NB12.Boilerplate.Modules.Auth.Domain.Events;
 
 namespace NB12.Boilerplate.Modules.Auth.Application.Commands.CreateUser
 {
@@ -43,6 +44,9 @@ namespace NB12.Boilerplate.Modules.Auth.Application.Commands.CreateUser
             await _identity.AddUserToRoleAsync(userId, "User", ct);
 
             await _uow.SaveChangesAsync(ct);
+
+            profile.AddDomainEvent(new UserProfileCreatedDomainEvent(profile.Id, profile.IdentityUserId, profile.Email));
+
             return Result<string>.Success(userId);
         }
     }

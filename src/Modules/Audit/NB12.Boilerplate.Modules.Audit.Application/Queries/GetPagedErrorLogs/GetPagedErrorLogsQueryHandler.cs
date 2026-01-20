@@ -1,4 +1,4 @@
-﻿using MediatR;
+﻿using NB12.Boilerplate.BuildingBlocks.Application.Messaging.Abstractions;
 using NB12.Boilerplate.BuildingBlocks.Application.Querying;
 using NB12.Boilerplate.BuildingBlocks.Domain.Common;
 using NB12.Boilerplate.Modules.Audit.Application.Interfaces;

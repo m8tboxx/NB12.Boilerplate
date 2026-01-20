@@ -9,6 +9,7 @@
 	<ItemGroup>
 		<ProjectReference Include="..\..\..\BuildingBlocks\NB12.Boilerplate.BuildingBlocks.Application\NB12.Boilerplate.BuildingBlocks.Application.csproj" />
 		<ProjectReference Include="..\..\..\BuildingBlocks\NB12.Boilerplate.BuildingBlocks.Domain\NB12.Boilerplate.BuildingBlocks.Domain.csproj" />
+		<ProjectReference Include="..\NB12.Boilerplate.Modules.Auth.Contracts\NB12.Boilerplate.Modules.Auth.Contracts.csproj" />
 		<ProjectReference Include="..\NB12.Boilerplate.Modules.Auth.Domain\NB12.Boilerplate.Modules.Auth.Domain.csproj" />
 	</ItemGroup>
 

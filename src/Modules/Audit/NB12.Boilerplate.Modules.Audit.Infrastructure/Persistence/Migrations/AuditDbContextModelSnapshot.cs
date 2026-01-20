@@ -23,7 +23,39 @@ namespace NB12.Boilerplate.Modules.Audit.Infrastructure.Persistence.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("NB12.Boilerplate.Modules.Audit.Domain.Enities.AuditLog", b =>
+            modelBuilder.Entity("NB12.Boilerplate.BuildingBlocks.Infrastructure.Outbox.OutboxMessage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("LastError")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("OccurredAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("ProcessedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProcessedAtUtc");
+
+                    b.ToTable("OutboxMessages", "audit");
+                });
+
+            modelBuilder.Entity("NB12.Boilerplate.Modules.Audit.Domain.Entities.AuditLog", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
@@ -68,7 +100,7 @@ namespace NB12.Boilerplate.Modules.Audit.Infrastructure.Persistence.Migrations
                     b.ToTable("AuditLogs", "audit");
                 });
 
-            modelBuilder.Entity("NB12.Boilerplate.Modules.Audit.Domain.Enities.ErrorLog", b =>
+            modelBuilder.Entity("NB12.Boilerplate.Modules.Audit.Domain.Entities.ErrorLog", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");

@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using NB12.Boilerplate.BuildingBlocks.Infrastructure.Outbox;
 using NB12.Boilerplate.Modules.Auth.Domain.Entities;
 using NB12.Boilerplate.Modules.Auth.Infrastructure.Models;
 
@@ -33,6 +34,8 @@ namespace NB12.Boilerplate.Modules.Auth.Infrastructure.Persistence
                 .OnDelete(DeleteBehavior.Cascade);
 
             builder.ApplyConfigurationsFromAssembly(typeof(AuthDbContext).Assembly);
+
+            builder.AddOutbox();
         }
     }
 }

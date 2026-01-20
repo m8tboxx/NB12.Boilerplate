@@ -155,6 +155,38 @@ namespace NB12.Boilerplate.Modules.Auth.Infrastructure.Persistence.Migrations
                     b.ToTable("UserTokens", "auth");
                 });
 
+            modelBuilder.Entity("NB12.Boilerplate.BuildingBlocks.Infrastructure.Outbox.OutboxMessage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("LastError")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("OccurredAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("ProcessedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProcessedAtUtc");
+
+                    b.ToTable("OutboxMessages", "auth");
+                });
+
             modelBuilder.Entity("NB12.Boilerplate.Modules.Auth.Domain.Entities.RefreshToken", b =>
                 {
                     b.Property<Guid>("Id")

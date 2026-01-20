@@ -1,9 +1,13 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
+using NB12.Boilerplate.BuildingBlocks.Application.Eventing.Integration;
 using NB12.Boilerplate.BuildingBlocks.Application.Interfaces;
 using NB12.Boilerplate.BuildingBlocks.Application.Security;
 using NB12.Boilerplate.BuildingBlocks.Infrastructure.Auditing;
 using NB12.Boilerplate.BuildingBlocks.Infrastructure.Auth;
+using NB12.Boilerplate.BuildingBlocks.Infrastructure.EventBus;
+using NB12.Boilerplate.BuildingBlocks.Infrastructure.Eventing;
+using System.Text.Json;
 
 namespace NB12.Boilerplate.BuildingBlocks.Infrastructure
 {
@@ -28,6 +32,11 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure
             services.AddSingleton<IAuditStore, NoOpAuditStore>(); // wird vom Audit-Modul überschrieben
             services.AddScoped<IAuditContextAccessor, DefaultAuditContextAccessor>();
             services.AddScoped<AuditSaveChangesInterceptor>();
+
+            services.AddSingleton(new JsonSerializerOptions(JsonSerializerDefaults.Web));
+            services.AddScoped<CompositeDomainEventToIntegrationEventMapper>();
+            services.AddScoped<DomainEventsOutboxInterceptor>();
+            services.AddEventBus();
 
             return services;
         }

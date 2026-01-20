@@ -1,9 +1,9 @@
-using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using NB12.Boilerplate.BuildingBlocks.Api.Extensions;
 using NB12.Boilerplate.BuildingBlocks.Api.Middleware;
 using NB12.Boilerplate.BuildingBlocks.Api.Middleware.ETag;
 using NB12.Boilerplate.BuildingBlocks.Application.Behaviors;
+using NB12.Boilerplate.BuildingBlocks.Application.Eventing;
 using NB12.Boilerplate.BuildingBlocks.Application.Modularity;
 using NB12.Boilerplate.BuildingBlocks.Application.Validation;
 using NB12.Boilerplate.BuildingBlocks.Infrastructure;
@@ -14,6 +14,8 @@ using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Scalar.AspNetCore;
 using Serilog;
+using NB12.Boilerplate.BuildingBlocks.Application.Messaging;
+using NB12.Boilerplate.BuildingBlocks.Application.Messaging.Abstractions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -45,10 +47,8 @@ foreach(var module in serviceModules)
     module.AddModule(builder.Services, builder.Configuration);
 }
 
-builder.Services.AddMediatR(cfg =>
-{
-    cfg.RegisterServicesFromAssemblies(moduleAssemblies);
-});
+builder.Services.AddMessaging(moduleAssemblies);
+
 
 builder.Services.AddAuthorization(options =>
 {
@@ -59,8 +59,9 @@ builder.Services.AddAuthorization(options =>
 
 // Global Pipeline
 builder.Services.AddValidatorsFromAssemblies(moduleAssemblies);
+builder.Services.AddDomainEventing(moduleAssemblies);
+
 builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
-// builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(AuthorizationBehavior<,>));
 builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(AuditBehavior<,>));
 
 builder.Services.AddOpenApi(options =>

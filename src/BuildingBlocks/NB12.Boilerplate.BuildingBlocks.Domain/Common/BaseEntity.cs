@@ -16,7 +16,7 @@ namespace NB12.Boilerplate.BuildingBlocks.Domain.Common
             Id = id;
         }
 
-        protected void AddDomainEvent(IDomainEvent @event)
+        public void AddDomainEvent(IDomainEvent @event)
             => _domainEvents.Add(@event);
         public void ClearDomainEvents() => _domainEvents.Clear();
 

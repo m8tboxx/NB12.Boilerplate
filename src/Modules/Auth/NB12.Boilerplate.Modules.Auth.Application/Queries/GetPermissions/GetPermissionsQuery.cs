@@ -1,4 +1,4 @@
-﻿using MediatR;
+﻿using NB12.Boilerplate.BuildingBlocks.Application.Messaging.Abstractions;
 using NB12.Boilerplate.Modules.Auth.Application.Dtos;
 
 namespace NB12.Boilerplate.Modules.Auth.Application.Queries.GetPermissions

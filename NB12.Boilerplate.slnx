@@ -21,6 +21,7 @@
   <Folder Name="/src/Modules/Auth/">
     <Project Path="src/Modules/Auth/NB12.Boilerplate.Modules.Auth.Api/NB12.Boilerplate.Modules.Auth.Api.csproj" Id="2be631de-ced5-45bf-a225-54755b502936" />
     <Project Path="src/Modules/Auth/NB12.Boilerplate.Modules.Auth.Application/NB12.Boilerplate.Modules.Auth.Application.csproj" Id="b3354a4e-916e-432a-91ec-cfde6df44244" />
+    <Project Path="src/Modules/Auth/NB12.Boilerplate.Modules.Auth.Contracts/NB12.Boilerplate.Modules.Auth.Contracts.csproj" Id="437990fc-4ef4-4b00-9cc3-e18a565de8b8" />
     <Project Path="src/Modules/Auth/NB12.Boilerplate.Modules.Auth.Domain/NB12.Boilerplate.Modules.Auth.Domain.csproj" />
     <Project Path="src/Modules/Auth/NB12.Boilerplate.Modules.Auth.Infrastructure/NB12.Boilerplate.Modules.Auth.Infrastructure.csproj" Id="a065381b-8cfe-4fba-bc5c-0dbfcc0b8947" />
   </Folder>

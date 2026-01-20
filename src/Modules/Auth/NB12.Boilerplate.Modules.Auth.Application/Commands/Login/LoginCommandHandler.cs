@@ -1,5 +1,5 @@
-﻿using MediatR;
-using Microsoft.Extensions.Options;
+﻿using Microsoft.Extensions.Options;
+using NB12.Boilerplate.BuildingBlocks.Application.Messaging.Abstractions;
 using NB12.Boilerplate.BuildingBlocks.Domain.Common;
 using NB12.Boilerplate.Modules.Auth.Application.Abstractions;
 using NB12.Boilerplate.Modules.Auth.Application.Interfaces;

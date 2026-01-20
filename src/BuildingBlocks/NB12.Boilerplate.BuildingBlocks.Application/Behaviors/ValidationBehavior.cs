@@ -1,5 +1,5 @@
 ﻿using FluentValidation;
-using MediatR;
+using NB12.Boilerplate.BuildingBlocks.Application.Messaging.Abstractions;
 using NB12.Boilerplate.BuildingBlocks.Domain.Common;
 
 namespace NB12.Boilerplate.BuildingBlocks.Application.Behaviors

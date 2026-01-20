@@ -1,8 +1,8 @@
-﻿using MediatR;
-using Microsoft.AspNetCore.Builder;
+﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using NB12.Boilerplate.BuildingBlocks.Api.ResultHandling;
+using NB12.Boilerplate.BuildingBlocks.Application.Messaging.Abstractions;
 using NB12.Boilerplate.Modules.Auth.Api.Requests;
 using NB12.Boilerplate.Modules.Auth.Application.Commands.AddRolePermissions;
 using NB12.Boilerplate.Modules.Auth.Application.Commands.AddUserRole;

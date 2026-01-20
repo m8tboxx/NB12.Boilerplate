@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using NB12.Boilerplate.BuildingBlocks.Infrastructure.Outbox;
 using NB12.Boilerplate.Modules.Audit.Domain.Entities;
 using NB12.Boilerplate.Modules.Audit.Domain.Ids;
 
@@ -56,6 +57,8 @@ namespace NB12.Boilerplate.Modules.Audit.Infrastructure.Persistence
                 e.HasIndex(x => x.OccurredAtUtc);
                 e.HasIndex(x => x.TraceId);
             });
+
+            b.AddOutbox();
         }
     }
 }

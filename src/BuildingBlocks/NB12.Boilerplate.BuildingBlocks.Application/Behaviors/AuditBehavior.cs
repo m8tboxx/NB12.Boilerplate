@@ -1,6 +1,6 @@
-﻿using MediatR;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using NB12.Boilerplate.BuildingBlocks.Application.Interfaces;
+using NB12.Boilerplate.BuildingBlocks.Application.Messaging.Abstractions;
 using System.Diagnostics;
 
 namespace NB12.Boilerplate.BuildingBlocks.Application.Behaviors

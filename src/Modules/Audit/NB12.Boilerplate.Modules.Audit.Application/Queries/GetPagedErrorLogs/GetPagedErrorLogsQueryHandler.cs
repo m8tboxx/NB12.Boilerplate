@@ -1,4 +1,5 @@
 ﻿using MediatR;
+using NB12.Boilerplate.BuildingBlocks.Application.Querying;
 using NB12.Boilerplate.BuildingBlocks.Domain.Common;
 using NB12.Boilerplate.Modules.Audit.Application.Interfaces;
 using NB12.Boilerplate.Modules.Audit.Application.Responses;
@@ -14,12 +15,12 @@ namespace NB12.Boilerplate.Modules.Audit.Application.Queries.GetPagedErrorLogs
 
         public async Task<Result<PagedResponse<ErrorLogDto>>> Handle(GetPagedErrorLogsQuery q, CancellationToken ct)
         {
-            var page = q.Page < 1 ? 1 : q.Page;
-            var size = q.PageSize is < 1 or > 500 ? 50 : q.PageSize;
+            var page = q.Page.Normalize(defaultSize: 50, maxSize: 500);
+            var sort = q.Sort;
 
             var result = await _repo.GetErrorLogsAsync(
                 q.FromUtc, q.ToUtc, q.UserId, q.TraceId,
-                page, size, ct);
+                page, sort, ct);
 
             return Result<PagedResponse<ErrorLogDto>>.Success(result);
         }

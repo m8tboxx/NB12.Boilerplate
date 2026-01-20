@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Hosting;
+using NB12.Boilerplate.BuildingBlocks.Api.Middleware;
 using NB12.Boilerplate.BuildingBlocks.Domain.Common;
 using NB12.Boilerplate.BuildingBlocks.Domain.Enums;
 using NB12.Boilerplate.BuildingBlocks.Domain.Exceptions;
@@ -66,13 +67,25 @@ namespace NB12.Boilerplate.BuildingBlocks.Api.ProblemHandling
             // FluentValidation -> 400 (Details strukturiert)
             if (exception is ValidationException fv)
             {
-                var errors = fv.Errors
+                var errorList = fv.Errors
+                    .Select(x => Error.Validation(
+                        code: "validation.field",
+                        message: x.ErrorMessage,
+                        meta: new Dictionary<string, object?>
+                        {
+                            ["field"] = x.PropertyName,
+                            ["attemptedValue"] = x.AttemptedValue
+                        }))
+                    .ToList();
+
+                var dict = fv.Errors
                     .GroupBy(x => x.PropertyName)
                     .ToDictionary(
                         g => g.Key,
                         g => g.Select(x => x.ErrorMessage).ToArray());
 
-                var pd = new ValidationProblemDetails(errors)
+
+                var pd = new ValidationProblemDetails(dict)
                 {
                     Status = StatusCodes.Status400BadRequest,
                     Title = "Validation",
@@ -81,6 +94,7 @@ namespace NB12.Boilerplate.BuildingBlocks.Api.ProblemHandling
                 };
 
                 Enrich(http, pd);
+                pd.Extensions["errors"] = errorList.Select(ApiErrorDto.From).ToArray();
                 return pd;
             }
 
@@ -133,6 +147,12 @@ namespace NB12.Boilerplate.BuildingBlocks.Api.ProblemHandling
             var traceId = Activity.Current?.Id ?? http.TraceIdentifier;
             pd.Extensions["traceId"] = traceId;
             pd.Extensions["timestampUtc"] = DateTimeOffset.UtcNow;
+
+            var correlationId = http.GetCorrelationId()
+                ?? (http.Request.Headers.TryGetValue(CorrelationIdMiddleware.HeaderName, out var cid) ? cid.ToString() : null);
+
+            if (!string.IsNullOrWhiteSpace(correlationId))
+                pd.Extensions["correlationId"] = correlationId;
         }
     }
 }

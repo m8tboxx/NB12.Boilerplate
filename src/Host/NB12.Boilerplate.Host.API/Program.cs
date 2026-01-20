@@ -1,6 +1,8 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using NB12.Boilerplate.BuildingBlocks.Api.Extensions;
+using NB12.Boilerplate.BuildingBlocks.Api.Middleware;
+using NB12.Boilerplate.BuildingBlocks.Api.Middleware.ETag;
 using NB12.Boilerplate.BuildingBlocks.Application.Behaviors;
 using NB12.Boilerplate.BuildingBlocks.Application.Modularity;
 using NB12.Boilerplate.BuildingBlocks.Application.Validation;
@@ -8,10 +10,14 @@ using NB12.Boilerplate.BuildingBlocks.Infrastructure;
 using NB12.Boilerplate.Host.API.Modules;
 using NB12.Boilerplate.Host.API.OpenApi;
 using NB12.Boilerplate.Modules.Auth.Infrastructure.Persistence.Seeding;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 using Scalar.AspNetCore;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
+
+const string CorsPolicyName = "Frontend";
 
 // Serilog
 builder.Host.UseSerilog((ctx, services, cfg) =>
@@ -66,13 +72,58 @@ builder.Services.AddOpenApi(options =>
 
 builder.Services.AddApiBuildingBlocks();
 
+builder.Services.AddOpenTelemetry()
+    .ConfigureResource(r => r.AddService(
+        serviceName: "NB12.Boilerplate.Host.API",
+        serviceVersion: typeof(Program).Assembly.GetName().Version?.ToString() ?? "unknown"))
+    .WithTracing(tracing =>
+    {
+        tracing
+            .AddAspNetCoreInstrumentation(o =>
+            {
+                o.RecordException = true;
+                o.EnrichWithHttpRequest = (activity, request) =>
+                {
+                    if (request.Headers.TryGetValue("X-Correlation-Id", out var cid))
+                        activity.SetTag("correlation_id", cid.ToString());
+                };
+            })
+            .AddHttpClientInstrumentation(o => o.RecordException = true)
+            .AddEntityFrameworkCoreInstrumentation(options =>
+            {
+                options.EnrichWithIDbCommand = (activity, command) =>
+                {
+                    activity.SetTag("db.statement", null);
+                    activity.SetTag("db.query.text", null);
+                    activity.SetTag("db.command_type", command.CommandType.ToString());
+                };
+            })
+            .AddOtlpExporter();
+    });
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(CorsPolicyName, policy =>
+    {
+        policy
+            .WithOrigins("https://localhost") // wichtig: exakt Scheme+Host, ohne Port
+            .WithMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
+            .WithHeaders("Authorization", "Content-Type", "If-None-Match", "X-Correlation-Id")
+            .WithExposedHeaders("ETag", "X-Correlation-Id") // sonst kann Nuxt ETag nicht lesen
+            .SetPreflightMaxAge(TimeSpan.FromHours(1));
+    });
+});
+
 var app = builder.Build();
 
+app.UseCorrelationId();
 app.UseSerilogRequestLogging();
 app.UseApiBuildingBlocks();
 app.UseHttpsRedirection();
+app.UseCors(CorsPolicyName);
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseETag();
 
 foreach (var module in endpointModules)
 {

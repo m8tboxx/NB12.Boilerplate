@@ -1,4 +1,5 @@
-﻿using NB12.Boilerplate.Modules.Audit.Application.Responses;
+﻿using NB12.Boilerplate.BuildingBlocks.Application.Querying;
+using NB12.Boilerplate.Modules.Audit.Application.Responses;
 
 namespace NB12.Boilerplate.Modules.Audit.Application.Interfaces
 {
@@ -12,8 +13,8 @@ namespace NB12.Boilerplate.Modules.Audit.Application.Interfaces
             string? operation,
             string? userId,
             string? traceId,
-            int page,
-            int pageSize,
+            PageRequest page,
+            Sort sort,
             CancellationToken ct);
 
         Task<PagedResponse<ErrorLogDto>> GetErrorLogsAsync(
@@ -21,8 +22,8 @@ namespace NB12.Boilerplate.Modules.Audit.Application.Interfaces
             DateTime? toUtc,
             string? userId,
             string? traceId,
-            int page,
-            int pageSize,
+            PageRequest page,
+            Sort sort,
             CancellationToken ct);
     }
 }

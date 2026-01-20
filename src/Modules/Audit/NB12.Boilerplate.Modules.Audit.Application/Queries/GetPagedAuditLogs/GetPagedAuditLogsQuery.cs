@@ -1,4 +1,5 @@
 ﻿using MediatR;
+using NB12.Boilerplate.BuildingBlocks.Application.Querying;
 using NB12.Boilerplate.BuildingBlocks.Domain.Common;
 using NB12.Boilerplate.Modules.Audit.Application.Responses;
 
@@ -12,7 +13,7 @@ namespace NB12.Boilerplate.Modules.Audit.Application.Queries.GetPagedAuditLogs
         string? Operation,
         string? UserId,
         string? TraceId,
-        int Page = 1,
-        int PageSize = 50)
+        PageRequest Page,
+        Sort Sort)
         : IRequest<Result<PagedResponse<AuditLogDto>>>;
 }

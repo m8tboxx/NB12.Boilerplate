@@ -10,19 +10,28 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.EventBus
         {
             services.AddSingleton<IEventBus, InMemoryEventBus>();
 
-            foreach (var type in assemblies.SelectMany(a => a.DefinedTypes))
+            foreach (var typeInfo in assemblies.SelectMany(a => a.DefinedTypes))
             {
-                if (type.IsAbstract || type.IsInterface) continue;
+                if (typeInfo.IsAbstract || typeInfo.IsInterface)
+                    continue;
 
-                foreach (var iface in type.ImplementedInterfaces)
+                var type = typeInfo.AsType();
+
+                // Non-generic mapper interface
+                if (typeof(IDomainEventToIntegrationEventMapper).IsAssignableFrom(type))
+                {
+                    services.AddSingleton(typeof(IDomainEventToIntegrationEventMapper), type);
+                }
+
+                // Generic integration event handlers
+                foreach (var iface in typeInfo.ImplementedInterfaces)
                 {
                     if (!iface.IsGenericType) continue;
 
                     if (iface.GetGenericTypeDefinition() == typeof(IIntegrationEventHandler<>))
+                    {
                         services.AddTransient(iface, type);
-
-                    if (iface.GetGenericTypeDefinition() == typeof(IDomainEventToIntegrationEventMapper))
-                        services.AddSingleton(iface, type);
+                    }
                 }
             }
 

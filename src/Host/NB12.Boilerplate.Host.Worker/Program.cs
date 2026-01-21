@@ -4,6 +4,7 @@ using NB12.Boilerplate.BuildingBlocks.Infrastructure.EventBus;
 using NB12.Boilerplate.BuildingBlocks.Infrastructure.Eventing;
 using NB12.Boilerplate.Host.Worker;
 using NB12.Boilerplate.Host.Worker.Modules;
+using NB12.Boilerplate.Modules.Auth.Contracts.IntegrationEvents;
 
 var builder = Host.CreateApplicationBuilder(args);
 
@@ -20,25 +21,19 @@ foreach (var module in serviceModules)
 builder.Services.AddDomainEventing(moduleAssemblies);
 builder.Services.AddEventBus(moduleAssemblies);
 
+var contractsAssemblies = new[]
+{
+    typeof(UserCreatedIntegrationEvent).Assembly
+};
+
+var registryAssemblies = moduleAssemblies
+    .Concat(contractsAssemblies)
+    .Distinct()
+    .ToArray();
+
 builder.Services.Configure<OutboxOptions>(builder.Configuration.GetSection("Outbox"));
-builder.Services.AddSingleton(sp => new IntegrationEventTypeRegistry(moduleAssemblies));
+builder.Services.AddSingleton(sp => new IntegrationEventTypeRegistry(registryAssemblies));
 builder.Services.AddHostedService<OutboxPublisherWorker>();
-
-//builder.Services.AddSingleton(sp =>
-//{
-//    // Re-use the same module assemblies you already have available via ModuleRegistration
-//    var serviceModules = ModuleRegistration.ServiceModules();
-//    var assemblies = serviceModules.Select(m => m.ApplicationAssembly).Distinct().ToArray();
-//    return new IntegrationEventTypeRegistry(assemblies);
-//});
-
-//// Eventbus + Json
-//builder.Services.AddSingleton(new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web));
-//builder.Services.AddSingleton<IEventBus, InMemoryEventBus>();
-
-//builder.Services.AddHostedService<OutboxPublisherWorker>();
-
-//builder.Services.AddHostedService<Worker>();
 
 var host = builder.Build();
 host.Run();

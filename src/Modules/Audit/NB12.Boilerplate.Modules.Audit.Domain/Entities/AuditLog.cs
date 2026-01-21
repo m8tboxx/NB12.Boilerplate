@@ -6,7 +6,9 @@ namespace NB12.Boilerplate.Modules.Audit.Domain.Entities
     {
         public AuditLog(
             AuditLogId id,
+            Guid integrationEventId,
             DateTime occurredAtUtc,
+            string module,
             string entityType,
             string entityId,
             string operation,
@@ -17,7 +19,9 @@ namespace NB12.Boilerplate.Modules.Audit.Domain.Entities
             string? email)
         {
             Id = id;
+            IntegrationEventId = integrationEventId;
             OccurredAtUtc = occurredAtUtc;
+            Module = module;
             EntityType = entityType;
             EntityId = entityId;
             Operation = operation;
@@ -28,7 +32,9 @@ namespace NB12.Boilerplate.Modules.Audit.Domain.Entities
             Email = email;
         }
         public AuditLogId Id { get; private set; }
+        public Guid IntegrationEventId { get; private set; }
         public DateTime OccurredAtUtc { get; private set; }
+        public string Module { get; private set; } = default!;
 
         public string? UserId { get; private set; }
         public string? Email { get; private set; }

@@ -10,5 +10,7 @@
 
         void SetCreated(DateTime utcNow, string? actor);
         void SetModified(DateTime utcNow, string? actor);
+
+        string GetAuditEntityId();
     }
 }

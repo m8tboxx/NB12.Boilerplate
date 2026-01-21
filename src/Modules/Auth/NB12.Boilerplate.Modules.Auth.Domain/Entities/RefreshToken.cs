@@ -1,4 +1,5 @@
-﻿using NB12.Boilerplate.Modules.Auth.Domain.Ids;
+﻿using NB12.Boilerplate.BuildingBlocks.Domain.Auditing;
+using NB12.Boilerplate.Modules.Auth.Domain.Ids;
 
 namespace NB12.Boilerplate.Modules.Auth.Domain.Entities
 {
@@ -23,6 +24,7 @@ namespace NB12.Boilerplate.Modules.Auth.Domain.Entities
         public string UserId { get; private set; } = null!;
         public Guid FamilyId { get; private set; }
 
+        [DoNotAudit]
         public string TokenHash { get; private set; } = null!;
         public string? RevokedReason { get; private set; }
 

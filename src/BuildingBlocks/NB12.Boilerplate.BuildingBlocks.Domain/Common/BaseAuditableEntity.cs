@@ -1,4 +1,5 @@
 ﻿using NB12.Boilerplate.BuildingBlocks.Domain.Interfaces;
+using System.Reflection;
 
 namespace NB12.Boilerplate.BuildingBlocks.Domain.Common
 {
@@ -33,6 +34,24 @@ namespace NB12.Boilerplate.BuildingBlocks.Domain.Common
         {
             LastModifiedAtUtc = utcNow;
             LastModifiedBy = actor;
+        }
+
+        public string GetAuditEntityId()
+        {
+            // StronglyTypedId Pattern: public TValue Value { get; }
+            var id = Id;
+            if (id is null) return "<null>";
+
+            var valueProp = id.GetType().GetProperty("Value", BindingFlags.Public | BindingFlags.Instance);
+            if (valueProp is not null)
+            {
+                var value = valueProp.GetValue(id);
+                if (value is not null)
+                    return value.ToString()!;
+            }
+
+            // Fallback
+            return id.ToString()!;
         }
     }
 }

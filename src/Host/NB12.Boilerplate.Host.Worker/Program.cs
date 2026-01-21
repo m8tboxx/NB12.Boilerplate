@@ -4,6 +4,7 @@ using NB12.Boilerplate.BuildingBlocks.Infrastructure.EventBus;
 using NB12.Boilerplate.BuildingBlocks.Infrastructure.Eventing;
 using NB12.Boilerplate.Host.Worker;
 using NB12.Boilerplate.Host.Worker.Modules;
+using NB12.Boilerplate.Modules.Audit.Contracts.IntegrationEvents;
 using NB12.Boilerplate.Modules.Auth.Contracts.IntegrationEvents;
 
 var builder = Host.CreateApplicationBuilder(args);
@@ -23,7 +24,8 @@ builder.Services.AddEventBus(moduleAssemblies);
 
 var contractsAssemblies = new[]
 {
-    typeof(UserCreatedIntegrationEvent).Assembly
+    typeof(UserCreatedIntegrationEvent).Assembly,
+    typeof(AuditableEntitiesChangedIntegrationEvent).Assembly
 };
 
 var registryAssemblies = moduleAssemblies

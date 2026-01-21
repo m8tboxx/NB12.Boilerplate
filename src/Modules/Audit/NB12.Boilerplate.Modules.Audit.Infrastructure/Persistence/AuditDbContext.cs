@@ -1,5 +1,4 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using NB12.Boilerplate.BuildingBlocks.Infrastructure.Outbox;
 using NB12.Boilerplate.Modules.Audit.Domain.Entities;
 using NB12.Boilerplate.Modules.Audit.Domain.Ids;
 
@@ -27,7 +26,9 @@ namespace NB12.Boilerplate.Modules.Audit.Infrastructure.Persistence
                     value => new AuditLogId(value))
                 .ValueGeneratedNever();
 
+                e.Property(x => x.IntegrationEventId).IsRequired();
                 e.Property(x => x.OccurredAtUtc).IsRequired();
+                e.Property(x => x.Module).IsRequired();
                 e.Property(x => x.EntityType).IsRequired();
                 e.Property(x => x.EntityId).IsRequired();
                 e.Property(x => x.Operation).IsRequired();
@@ -39,6 +40,8 @@ namespace NB12.Boilerplate.Modules.Audit.Infrastructure.Persistence
 
                 e.HasIndex(x => x.OccurredAtUtc);
                 e.HasIndex(x => new { x.EntityType, x.EntityId });
+                e.HasIndex(x => x.IntegrationEventId).IsUnique();
+                e.HasIndex(x => new { x.Module, x.EntityType, x.EntityId });
             });
 
             b.Entity<ErrorLog>(e =>
@@ -57,8 +60,6 @@ namespace NB12.Boilerplate.Modules.Audit.Infrastructure.Persistence
                 e.HasIndex(x => x.OccurredAtUtc);
                 e.HasIndex(x => x.TraceId);
             });
-
-            b.AddOutbox();
         }
     }
 }

@@ -4,10 +4,12 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
+using NB12.Boilerplate.BuildingBlocks.Application.Interfaces;
 using NB12.Boilerplate.BuildingBlocks.Application.Security;
 using NB12.Boilerplate.BuildingBlocks.Infrastructure.Auditing;
 using NB12.Boilerplate.BuildingBlocks.Infrastructure.Eventing;
 using NB12.Boilerplate.BuildingBlocks.Infrastructure.Outbox;
+using NB12.Boilerplate.Modules.Audit.Contracts.Auditing;
 using NB12.Boilerplate.Modules.Auth.Application.Abstractions;
 using NB12.Boilerplate.Modules.Auth.Application.Interfaces;
 using NB12.Boilerplate.Modules.Auth.Application.Options;
@@ -125,6 +127,8 @@ namespace NB12.Boilerplate.Modules.Auth.Infrastructure
 
             services.AddScoped<IModuleOutboxStore>(sp =>
                 new EfCoreOutboxStore<AuthDbContext>(sp.GetRequiredService<AuthDbContext>(), module: "Auth"));
+
+            services.AddScoped<IAuditIntegrationEventFactory, AuditIntegrationEventFactory>();
 
             return services;
         }

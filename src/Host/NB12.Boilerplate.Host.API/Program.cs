@@ -6,12 +6,11 @@ using NB12.Boilerplate.BuildingBlocks.Application.Behaviors;
 using NB12.Boilerplate.BuildingBlocks.Application.Eventing;
 using NB12.Boilerplate.BuildingBlocks.Application.Messaging;
 using NB12.Boilerplate.BuildingBlocks.Application.Messaging.Abstractions;
-using NB12.Boilerplate.BuildingBlocks.Application.Modularity;
 using NB12.Boilerplate.BuildingBlocks.Application.Validation;
 using NB12.Boilerplate.BuildingBlocks.Infrastructure;
 using NB12.Boilerplate.BuildingBlocks.Infrastructure.EventBus;
-using NB12.Boilerplate.Host.API.Modules;
 using NB12.Boilerplate.Host.API.OpenApi;
+using NB12.Boilerplate.Host.Shared;
 using NB12.Boilerplate.Modules.Auth.Infrastructure.Persistence.Seeding;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -28,16 +27,13 @@ builder.Host.UseSerilog((ctx, services, cfg) =>
        .ReadFrom.Services(services)
        .Enrich.FromLogContext());
 
-builder.Services.AddSingleton<ModuleCatalog>();
-
 // Module Loading
-var serviceModules = ModuleRegistration.ServiceModules();
-var endpointModules = ModuleRegistration.EndpointModules();
+var serviceModules = ModuleComposition.ServiceModules();
+var endpointModules = ModuleComposition.EndpointModules();
+var moduleAssemblies = ModuleComposition.ModuleAssemblies();
 
-var moduleAssemblies = serviceModules
-    .Select(m => m.ApplicationAssembly)
-    .Distinct()
-    .ToArray();
+// scanning
+builder.Services.AddEventBus(moduleAssemblies);
 
 // Cross-cutting infrastructure (CurrentUser, dynamic permission policies, etc.)
 builder.Services.AddInfrastructureBuildingBlocks(moduleAssemblies);

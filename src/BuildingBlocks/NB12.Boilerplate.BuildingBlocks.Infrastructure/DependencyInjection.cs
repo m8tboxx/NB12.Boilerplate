@@ -30,7 +30,7 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure
             services.AddSingleton<IAuthorizationHandler, PermissionAuthorizationHandler>();
 
             // Audit core
-            services.AddSingleton<IAuditStore, NoOpAuditStore>(); // wird vom Audit-Modul überschrieben
+            services.AddSingleton<IErrorAuditWriter, NoOpErrorAuditWriter>(); // wird vom Audit-Modul überschrieben
             services.AddScoped<IAuditContextAccessor, DefaultAuditContextAccessor>();
             services.AddScoped<AuditSaveChangesInterceptor>();
 

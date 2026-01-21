@@ -12,8 +12,6 @@ namespace NB12.Boilerplate.BuildingBlocks.Api.ProblemHandling
         private readonly IProblemDetailsService _problemDetailsService;
         private readonly IProblemDetailsMapper _mapper;
         private readonly ILogger<ApiExceptionHandler> _logger;
-        //private readonly IAuditStore _auditStore;
-        //private readonly IAuditContextAccessor _auditCtx;
         private readonly IServiceScopeFactory _scopeFactory;
 
         public ApiExceptionHandler(
@@ -21,15 +19,11 @@ namespace NB12.Boilerplate.BuildingBlocks.Api.ProblemHandling
             IProblemDetailsMapper mapper,
             ILogger<ApiExceptionHandler> logger,
             IServiceScopeFactory scopeFactory)
-            //IAuditStore auditStore,
-            //IAuditContextAccessor auditCtx)
         {
             _problemDetailsService = problemDetailsService;
             _mapper = mapper;
             _logger = logger;
             _scopeFactory = scopeFactory;
-            //_auditStore = auditStore;
-            //_auditCtx = auditCtx;
         }
 
         public async ValueTask<bool> TryHandleAsync(HttpContext http, Exception exception, CancellationToken ct)
@@ -37,7 +31,7 @@ namespace NB12.Boilerplate.BuildingBlocks.Api.ProblemHandling
             _logger.LogError(exception, "Unhandled exception");
 
             using var scope = _scopeFactory.CreateScope();
-            var _auditStore = scope.ServiceProvider.GetRequiredService<IAuditStore>();
+            var _auditStore = scope.ServiceProvider.GetRequiredService<IErrorAuditWriter>();
             var _auditCtx = scope.ServiceProvider.GetRequiredService<IAuditContextAccessor>();
 
             var pd = _mapper.FromException(http, exception);
@@ -59,7 +53,7 @@ namespace NB12.Boilerplate.BuildingBlocks.Api.ProblemHandling
             }
             catch (Exception ex)
             {
-                // Audit darf nie die Fehlerbehandlung killen
+                // Audit have not to kill error handling
                 _logger.LogWarning(ex, "Failed to write error audit log");
             }
 

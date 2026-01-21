@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using NB12.Boilerplate.BuildingBlocks.Application.Interfaces;
 using NB12.Boilerplate.Modules.Audit.Application.Interfaces;
 using NB12.Boilerplate.Modules.Audit.Infrastructure.Persistence;
 using NB12.Boilerplate.Modules.Audit.Infrastructure.Repositories;
@@ -26,6 +27,7 @@ namespace NB12.Boilerplate.Modules.Audit.Infrastructure
 
             services.AddScoped<IAuditReadRepository, AuditReadRepository>();
             services.AddScoped<IAuditLogWriter, EfCoreAuditLogWriter>();
+            services.AddScoped<IErrorAuditWriter, EfCoreErrorLogWriter>();
             return services;
         }
     }

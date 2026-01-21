@@ -16,13 +16,13 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Outbox
 
         public async Task MarkProcessed(OutboxMessage msg, DateTime utcNow, CancellationToken ct)
         {
-            msg.Proccessed(utcNow);
+            msg.MarkProcessed(utcNow);
             await db.SaveChangesAsync(ct);
         }
 
         public async Task MarkFailed(OutboxMessage msg, DateTime utcNow, Exception ex, CancellationToken ct)
         {
-            msg.Failed(ex.ToString());
+            msg.MarkFailed(ex.ToString());
             await db.SaveChangesAsync(ct);
         }
     }

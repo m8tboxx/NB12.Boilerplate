@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
+using NB12.Boilerplate.BuildingBlocks.Api.Security;
 using NB12.Boilerplate.BuildingBlocks.Application.Security;
-using NB12.Boilerplate.BuildingBlocks.Web.Security;
 
 namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Auth
 {

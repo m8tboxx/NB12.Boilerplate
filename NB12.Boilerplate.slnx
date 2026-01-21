@@ -5,10 +5,10 @@
     <Project Path="src/BuildingBlocks/NB12.Boilerplate.BuildingBlocks.Application/NB12.Boilerplate.BuildingBlocks.Application.csproj" Id="6a201d17-206d-4cf6-bc53-b860d4d3caac" />
     <Project Path="src/BuildingBlocks/NB12.Boilerplate.BuildingBlocks.Domain/NB12.Boilerplate.BuildingBlocks.Domain.csproj" Id="254a0cc2-72d1-4d4f-a9db-95d41cf3bdd5" />
     <Project Path="src/BuildingBlocks/NB12.Boilerplate.BuildingBlocks.Infrastructure/NB12.Boilerplate.BuildingBlocks.Infrastructure.csproj" Id="30cda746-bb43-4305-b1b7-0926863df745" />
-    <Project Path="src/BuildingBlocks/NB12.Boilerplate.BuildingBlocks.Web/NB12.Boilerplate.BuildingBlocks.Web.csproj" Id="3fc3b16c-3169-42b7-8c93-6b2f3baf6bf0" />
   </Folder>
   <Folder Name="/src/Host/">
     <Project Path="src/Host/NB12.Boilerplate.Host.API/NB12.Boilerplate.Host.API.csproj" />
+    <Project Path="src/Host/NB12.Boilerplate.Host.Shared/NB12.Boilerplate.Host.Shared.csproj" Id="0494ccec-ffcd-4498-8cb6-82ecc4ade873" />
     <Project Path="src/Host/NB12.Boilerplate.Host.Worker/NB12.Boilerplate.Host.Worker.csproj" />
   </Folder>
   <Folder Name="/src/Modules/" />
@@ -27,6 +27,6 @@
     <Project Path="src/Modules/Auth/NB12.Boilerplate.Modules.Auth.Infrastructure/NB12.Boilerplate.Modules.Auth.Infrastructure.csproj" Id="a065381b-8cfe-4fba-bc5c-0dbfcc0b8947" />
   </Folder>
   <Folder Name="/src/Tests/">
-    <Project Path="src/Tests/NB12.Boilerplate.Host.Api.IntegrationTests/NB12.Boilerplate.Host.Api.IntegrationTests.csproj" Id="9123524a-1817-41af-b996-d5587390fd24" />
+    <Project Path="src/Tests/NB12.Boilerplate.Host.Api.IntegrationTests/NB12.Boilerplate.Host.Api.IntegrationTests.csproj" Id="9123524a-1817-41af-b996-d5587390fd24" DisplayName="NB12.Boilerplate.Host.API.IntegrationTests" />
   </Folder>
 </Solution>

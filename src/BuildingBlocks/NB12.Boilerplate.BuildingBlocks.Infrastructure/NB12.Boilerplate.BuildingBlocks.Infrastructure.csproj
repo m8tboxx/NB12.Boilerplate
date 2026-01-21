@@ -17,9 +17,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\NB12.Boilerplate.BuildingBlocks.Api\NB12.Boilerplate.BuildingBlocks.Api.csproj" />
     <ProjectReference Include="..\NB12.Boilerplate.BuildingBlocks.Application\NB12.Boilerplate.BuildingBlocks.Application.csproj" />
     <ProjectReference Include="..\NB12.Boilerplate.BuildingBlocks.Domain\NB12.Boilerplate.BuildingBlocks.Domain.csproj" />
-    <ProjectReference Include="..\NB12.Boilerplate.BuildingBlocks.Web\NB12.Boilerplate.BuildingBlocks.Web.csproj" />
   </ItemGroup>
 
 </Project>

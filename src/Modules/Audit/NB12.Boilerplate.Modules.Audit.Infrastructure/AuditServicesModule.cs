@@ -1,14 +1,14 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using NB12.Boilerplate.BuildingBlocks.Application.Security;
-using NB12.Boilerplate.BuildingBlocks.Web.Modularity;
+using NB12.Boilerplate.BuildingBlocks.Api.Modularity;
 using NB12.Boilerplate.Modules.Audit.Application;
 using NB12.Boilerplate.Modules.Audit.Application.Security;
 using System.Reflection;
 
 namespace NB12.Boilerplate.Modules.Audit.Infrastructure
 {
-    public sealed class AuditServicesModule : IModuleServices
+    public sealed class AuditServicesModule : IServiceModule
     {
         public string Name => "AuditModule";
         public Assembly ApplicationAssembly => typeof(AssemblyMarker).Assembly;

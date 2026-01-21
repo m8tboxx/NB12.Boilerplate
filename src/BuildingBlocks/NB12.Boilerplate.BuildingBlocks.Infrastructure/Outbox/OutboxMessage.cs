@@ -23,12 +23,12 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Outbox
             LastError = lastError;
         }
 
-        public void Proccessed(DateTime processedAtUtc)
+        public void MarkProcessed(DateTime processedAtUtc)
         {
             ProcessedAtUtc = processedAtUtc;
         }
 
-        public void Failed(string lastError)
+        public void MarkFailed(string lastError)
         {
             AttemptCount += 1;
             LastError = lastError;

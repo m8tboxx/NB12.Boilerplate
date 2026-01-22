@@ -5,9 +5,7 @@ using NB12.Boilerplate.BuildingBlocks.Application.Interfaces;
 using NB12.Boilerplate.BuildingBlocks.Application.Security;
 using NB12.Boilerplate.BuildingBlocks.Infrastructure.Auditing;
 using NB12.Boilerplate.BuildingBlocks.Infrastructure.Auth;
-using NB12.Boilerplate.BuildingBlocks.Infrastructure.EventBus;
 using NB12.Boilerplate.BuildingBlocks.Infrastructure.Eventing;
-using System.Reflection;
 using System.Text.Json;
 
 namespace NB12.Boilerplate.BuildingBlocks.Infrastructure
@@ -17,7 +15,7 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure
         /// <summary>
         /// Registers cross-cutting infrastructure services that must be available to all modules.
         /// </summary>
-        public static IServiceCollection AddInfrastructureBuildingBlocks(this IServiceCollection services, params Assembly[] assemblies)
+        public static IServiceCollection AddInfrastructureBuildingBlocks(this IServiceCollection services)
         {
             services.AddHttpContextAccessor();
 
@@ -37,7 +35,7 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure
             services.AddSingleton(new JsonSerializerOptions(JsonSerializerDefaults.Web));
             services.AddScoped<CompositeDomainEventToIntegrationEventMapper>();
             services.AddScoped<DomainEventsOutboxInterceptor>();
-            services.AddEventBus(assemblies);
+            //services.AddEventBus(assemblies);
 
             return services;
         }

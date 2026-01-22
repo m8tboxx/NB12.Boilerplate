@@ -20,7 +20,10 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.EventBus
                 // Non-generic mapper interface
                 if (typeof(IDomainEventToIntegrationEventMapper).IsAssignableFrom(type))
                 {
-                    services.AddSingleton(typeof(IDomainEventToIntegrationEventMapper), type);
+                    if (!services.Any(sd => sd.ServiceType == typeof(IDomainEventToIntegrationEventMapper) && sd.ImplementationType == type))
+                    {
+                        services.AddSingleton(typeof(IDomainEventToIntegrationEventMapper), type);
+                    }
                 }
 
                 // Generic integration event handlers

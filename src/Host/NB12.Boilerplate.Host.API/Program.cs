@@ -36,7 +36,7 @@ var moduleAssemblies = ModuleComposition.ModuleAssemblies();
 builder.Services.AddEventBus(moduleAssemblies);
 
 // Cross-cutting infrastructure (CurrentUser, dynamic permission policies, etc.)
-builder.Services.AddInfrastructureBuildingBlocks(moduleAssemblies);
+builder.Services.AddInfrastructureBuildingBlocks();
 
 // Module DI
 foreach (var module in serviceModules)

@@ -28,7 +28,7 @@ var registryAssemblies = serviceAssemblies
 
 // Cross-cutting infrastructure (db, current user, permission policies etc.)
 // IMPORTANT: pass assemblies if your method supports it (consistent with API host)
-builder.Services.AddInfrastructureBuildingBlocks(serviceAssemblies);
+builder.Services.AddInfrastructureBuildingBlocks();
 
 // Domain eventing + event bus (use service assemblies)
 builder.Services.AddDomainEventing(serviceAssemblies);

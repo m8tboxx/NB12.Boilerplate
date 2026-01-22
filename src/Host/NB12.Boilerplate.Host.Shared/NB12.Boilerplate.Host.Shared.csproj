@@ -9,8 +9,10 @@
   <ItemGroup>
     <ProjectReference Include="..\..\BuildingBlocks\NB12.Boilerplate.BuildingBlocks.Api\NB12.Boilerplate.BuildingBlocks.Api.csproj" />
     <ProjectReference Include="..\..\Modules\Audit\NB12.Boilerplate.Modules.Audit.Api\NB12.Boilerplate.Modules.Audit.Api.csproj" />
+    <ProjectReference Include="..\..\Modules\Audit\NB12.Boilerplate.Modules.Audit.Application\NB12.Boilerplate.Modules.Audit.Application.csproj" />
     <ProjectReference Include="..\..\Modules\Audit\NB12.Boilerplate.Modules.Audit.Infrastructure\NB12.Boilerplate.Modules.Audit.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Modules\Auth\NB12.Boilerplate.Modules.Auth.Api\NB12.Boilerplate.Modules.Auth.Api.csproj" />
+    <ProjectReference Include="..\..\Modules\Auth\NB12.Boilerplate.Modules.Auth.Application\NB12.Boilerplate.Modules.Auth.Application.csproj" />
     <ProjectReference Include="..\..\Modules\Auth\NB12.Boilerplate.Modules.Auth.Infrastructure\NB12.Boilerplate.Modules.Auth.Infrastructure.csproj" />
   </ItemGroup>
 

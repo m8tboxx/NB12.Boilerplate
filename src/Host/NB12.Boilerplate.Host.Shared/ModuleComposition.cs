@@ -13,53 +13,56 @@ namespace NB12.Boilerplate.Host.Shared
     /// </summary>
     public static class ModuleComposition
     {
-        // Central module list. Add/remove modules ONLY here.
         private static readonly IServiceModule[] _serviceModules =
         [
-            new AuthApiServicesModule(),
-            new AuthServicesModule(),
             new AuditServicesModule(),
-            // further modules
-        ];
+        new AuthServicesModule(),
+        new AuthApiServicesModule(),
+        // further modules …
+    ];
 
-        private static readonly IEndpointModule[] _endpointModules = [
+        private static readonly IEndpointModule[] _endpointModules =
+        [
             new AuthEndpointsModule(),
-            new AuthAdminEndpointsModule(),
-            new AuditEndpointsModule(),
-            // further modules
-        ];
+        new AuthAdminEndpointsModule(),
+        new AuditEndpointsModule(),
+        // further modules …
+    ];
 
-
-        /// <summary>
-        /// Modules that register DI services.
-        /// </summary>
         public static IServiceModule[] ServiceModules() => _serviceModules;
 
-        /// <summary>
-        /// Modules that map Minimal API endpoints (Host.API only).
-        /// </summary>
         public static IEndpointModule[] EndpointModules() => _endpointModules;
 
         /// <summary>
-        /// Assemblies of modules used for scanning (event registry, MediatR, validators, etc.).
-        /// Includes both service and endpoint modules (distinct).
+        /// Assemblies for scanning in Host.API (service + application + endpoint).
         /// </summary>
         public static Assembly[] ModuleAssemblies()
-            => _serviceModules
-                .Cast<object>()
-                .Concat( _endpointModules.Cast<object>())
-                .Select(m => m.GetType().Assembly)
+        {
+            foreach (var m in _serviceModules)
+            {
+                if (m.ApplicationAssembly is null)
+                    throw new InvalidOperationException($"{m.GetType().Name} must provide ApplicationAssembly.");
+            }
+            // Service assemblies + corresponding Application assemblies
+            var serviceAndApplication = _serviceModules
+                .SelectMany(m => new[] { m.GetType().Assembly, m.ApplicationAssembly });
+
+            // Endpoint assemblies (API)
+            var endpoints = _endpointModules
+                .Select(m => m.GetType().Assembly);
+
+            return serviceAndApplication
+                .Concat(endpoints)
                 .Distinct()
                 .ToArray();
-
+        }
 
         /// <summary>
-        /// Assemblies that belong to service modules only. Prefer this in Host.Worker
-        /// to avoid pulling in API endpoint assemblies unnecessarily.
+        /// Assemblies for scanning in Host.Worker (service + application only).
         /// </summary>
         public static Assembly[] ServiceAssemblies()
             => _serviceModules
-                .Select(m => m.GetType().Assembly)
+                .SelectMany(m => new[] { m.GetType().Assembly, m.ApplicationAssembly })
                 .Distinct()
                 .ToArray();
     }

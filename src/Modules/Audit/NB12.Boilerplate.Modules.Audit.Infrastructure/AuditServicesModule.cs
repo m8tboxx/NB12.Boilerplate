@@ -8,7 +8,7 @@ using System.Reflection;
 
 namespace NB12.Boilerplate.Modules.Audit.Infrastructure
 {
-    public sealed class AuditServicesModule : IServiceModule
+    public sealed class AuditServicesModule : IServiceModule, IModuleAssemblyProvider
     {
         public string Name => "AuditModule";
         public Assembly ApplicationAssembly => typeof(AssemblyMarker).Assembly;
@@ -16,8 +16,13 @@ namespace NB12.Boilerplate.Modules.Audit.Infrastructure
         public void AddModule(IServiceCollection services, IConfiguration config)
         {
             services.AddAuditInfrastructure(config);
-
             services.AddSingleton<IPermissionProvider, AuditPermissionProvider>();
         }
+
+        public IEnumerable<Assembly> GetAdditionalAssemblies()
+            => new[]
+            {
+                typeof(AssemblyMarker).Assembly,
+            };
     }
 }

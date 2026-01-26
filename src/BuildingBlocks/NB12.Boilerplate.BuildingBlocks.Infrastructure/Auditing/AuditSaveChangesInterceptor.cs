@@ -1,7 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Diagnostics;
-//using Microsoft.Extensions.Logging;
 using NB12.Boilerplate.BuildingBlocks.Application.Auditing;
 using NB12.Boilerplate.BuildingBlocks.Application.Interfaces;
 using NB12.Boilerplate.BuildingBlocks.Domain.Auditing;
@@ -14,9 +13,9 @@ using System.Text.Json;
 namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Auditing
 {
     public sealed class AuditSaveChangesInterceptor(
-    IAuditIntegrationEventFactory factory,
-    IAuditContextAccessor ctx,
-    JsonSerializerOptions json) : SaveChangesInterceptor //ILogger<AuditSaveChangesInterceptor> logger
+        IAuditIntegrationEventFactory factory,
+        IAuditContextAccessor ctx,
+        JsonSerializerOptions json) : SaveChangesInterceptor
     {
         public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
             DbContextEventData eventData,
@@ -37,7 +36,8 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Auditing
 
         private void CaptureApplyAndEnqueue(DbContext? db)
         {
-            if (db is null) return;
+            if (db is null)
+                return;
 
             var auditCtx = ctx.GetCurrent();
             var actor = auditCtx.UserId ?? auditCtx.Email ?? "system";
@@ -48,17 +48,22 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Auditing
                 .Where(e => e.State is EntityState.Added or EntityState.Modified or EntityState.Deleted)
                 .ToList();
 
-            if (entries.Count == 0) return;
+            if (entries.Count == 0)
+                return;
 
             // 1) Auditing Felder setzen
             foreach (var e in entries)
             {
                 var aud = (IAuditableEntity)e.Entity;
-                if (e.State == EntityState.Added) aud.SetCreated(auditCtx.OccurredAtUtc, actor);
-                if (e.State == EntityState.Modified) aud.SetModified(auditCtx.OccurredAtUtc, actor);
+
+                if (e.State == EntityState.Added)
+                    aud.SetCreated(auditCtx.OccurredAtUtc, actor);
+
+                if (e.State == EntityState.Modified)
+                    aud.SetModified(auditCtx.OccurredAtUtc, actor);
             }
 
-            // 2) Changes in AuditOutboxEntry überführen
+            // 2) Änderungen in AuditOutboxEntry überführen
             var outboxEntries = new List<AuditOutboxEntry>(entries.Count);
 
             foreach (var e in entries)
@@ -66,10 +71,9 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Auditing
                 var entityType = e.Metadata.ClrType.FullName ?? e.Metadata.ClrType.Name;
                 var entity = (IAuditableEntity)e.Entity;
                 var entityId = entity.GetAuditEntityId();
-                //var entityId = TryGetEntityId(e) ?? "<unknown>";
                 var op = e.State.ToString();
 
-                var changes = BuildPropertyChanges(e); // mit DoNotAudit Filter
+                var changes = BuildPropertyChanges(e);
                 outboxEntries.Add(new AuditOutboxEntry(entityType, entityId, op, changes));
             }
 
@@ -93,20 +97,6 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Auditing
         private static string ResolveModuleName(DbContext db)
             => db.GetType().Name.Replace("DbContext", string.Empty);
 
-        //private static string? TryGetEntityId(EntityEntry entry)
-        //{
-        //    var pk = entry.Metadata.FindPrimaryKey();
-        //    if (pk is null) return null;
-
-        //    var values = pk.Properties
-        //        .Select(p => entry.Property(p.Name).CurrentValue ?? entry.Property(p.Name).OriginalValue)
-        //        .Where(v => v is not null)
-        //        .Select(ToStringSafe);
-
-        //    var joined = string.Join("|", values!);
-        //    return string.IsNullOrWhiteSpace(joined) ? null : joined;
-        //}
-
         private static IReadOnlyCollection<AuditOutboxPropertyChange> BuildPropertyChanges(EntityEntry entry)
         {
             var changes = new List<AuditOutboxPropertyChange>();
@@ -116,7 +106,7 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Auditing
                 if (p.Metadata.IsPrimaryKey())
                     continue;
 
-                // Update: nur modified
+                // Update: nur modified Properties
                 if (entry.State == EntityState.Modified && !p.IsModified)
                     continue;
 
@@ -133,8 +123,5 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Auditing
 
             return changes;
         }
-
-        private static string? ToStringSafe(object? value)
-            => value?.ToString();
     }
 }

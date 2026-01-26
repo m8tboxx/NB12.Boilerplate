@@ -9,14 +9,18 @@ using System.Text.Json;
 
 namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Eventing
 {
+    /// <summary>
+    /// Writes integration events to the Outbox table during SaveChanges and dispatches domain events
+    /// in-process after a successful commit.
+    /// </summary>
     public sealed class DomainEventsOutboxInterceptor(
         IDomainEventDispatcher dispatcher,
         CompositeDomainEventToIntegrationEventMapper mapper,
         JsonSerializerOptions jsonOptions) : SaveChangesInterceptor
     {
         private readonly List<IDomainEvent> _capturedDomainEvents = [];
+        private readonly List<IHasDomainEvents> _capturedEntities = [];
 
-        // ---- Sync hook (SaveChanges) ----
         public override InterceptionResult<int> SavingChanges(
             DbContextEventData eventData,
             InterceptionResult<int> result)
@@ -27,7 +31,6 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Eventing
             return result;
         }
 
-        // ---- Async hook (SaveChangesAsync) ----
         public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
             DbContextEventData eventData,
             InterceptionResult<int> result,
@@ -39,48 +42,36 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Eventing
             return ValueTask.FromResult(result);
         }
 
-        // Shared logic for both sync/async saving hooks
         private void CaptureAndWriteOutbox(DbContext db)
         {
-            var hasDomainEventsEntries = db.ChangeTracker.Entries()
-        .Where(e => e.Entity is IHasDomainEvents)
-        .Select(e => (Entity: (IHasDomainEvents)e.Entity, Type: e.Entity.GetType().FullName))
-        .ToList();
-
-            Console.WriteLine($">>> IHasDomainEvents entries: {hasDomainEventsEntries.Count}");
-            foreach (var e in hasDomainEventsEntries)
-                Console.WriteLine($">>>  - {e.Type} DomainEvents={e.Entity.DomainEvents.Count}");
-
-            // JETZT erst filtern auf wirklich vorhandene DomainEvents
-            var entitiesWithEvents = hasDomainEventsEntries
-                .Where(x => x.Entity.DomainEvents.Count > 0)
-                .ToList();
-
-            Console.WriteLine($">>> Entities WITH DomainEvents: {entitiesWithEvents.Count}");
+            // Reset state for this SaveChanges call (defensive).
+            _capturedDomainEvents.Clear();
+            _capturedEntities.Clear();
 
             var entities = db.ChangeTracker
                 .Entries<IHasDomainEvents>()
-                .Where(e => e.Entity.DomainEvents.Count > 0)
+                .Select(e => e.Entity)
+                .Where(e => e.DomainEvents.Count > 0)
                 .ToList();
 
             if (entities.Count == 0)
                 return;
 
-            var domainEvents2 = entitiesWithEvents.SelectMany(x => x.Entity.DomainEvents).ToList();
-            Console.WriteLine($">>> DomainEvents total: {domainEvents2.Count}");
+            _capturedEntities.AddRange(entities);
 
-            var domainEvents = entities.SelectMany(e => e.Entity.DomainEvents).ToList();
+            var domainEvents = entities
+                .SelectMany(e => e.DomainEvents)
+                .ToList();
+
             _capturedDomainEvents.AddRange(domainEvents);
 
             var outboxMessages = new List<OutboxMessage>();
-            var mappedCount = 0;
 
             foreach (var de in domainEvents)
             {
-                var ies = mapper.MapAll(de);
-                mappedCount += ies.Count;
+                var integrationEvents = mapper.MapAll(de);
 
-                foreach (var ie in ies)
+                foreach (var ie in integrationEvents)
                 {
                     outboxMessages.Add(new OutboxMessage(
                         new OutboxMessageId(ie.Id),
@@ -89,48 +80,70 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Eventing
                         JsonSerializer.Serialize(ie, ie.GetType(), jsonOptions),
                         attemptCount: 0,
                         processedAtUtc: null,
-                        lastError: null));
+                        lastError: null,
+                        lockedUntilUtc: null,
+                        lockedBy: null,
+                        deadLetteredAtUtc: null,
+                        deadLetterReason: null));
                 }
             }
 
-            Console.WriteLine($">>> IntegrationEvents mapped: {mappedCount}");
-            Console.WriteLine($">>> OutboxMessages to add: {outboxMessages.Count}");
-
             if (outboxMessages.Count > 0)
                 db.Set<OutboxMessage>().AddRange(outboxMessages);
-
-            // Clear domain events so they don't get re-processed
-            foreach (var entry in entities)
-                entry.Entity.ClearDomainEvents();
-
-            // optional: check tracker
-            var added = db.ChangeTracker.Entries<OutboxMessage>()
-                .Count(x => x.State == EntityState.Added);
-
-            Console.WriteLine($">>> OutboxMessage Added in tracker: {added}");
         }
 
-        // After commit: in-process dispatch
+        public override int SavedChanges(SaveChangesCompletedEventData eventData, int result)
+        {
+            AfterCommitDispatch(CancellationToken.None);
+            return base.SavedChanges(eventData, result);
+        }
+
         public override async ValueTask<int> SavedChangesAsync(
             SaveChangesCompletedEventData eventData,
             int result,
             CancellationToken cancellationToken = default)
         {
-            if (_capturedDomainEvents.Count > 0)
-            {
-                var toDispatch = _capturedDomainEvents.ToList();
-                _capturedDomainEvents.Clear();
-
-                await dispatcher.Dispatch(toDispatch, cancellationToken);
-            }
-
+            await AfterCommitDispatchAsync(cancellationToken);
             return await base.SavedChangesAsync(eventData, result, cancellationToken);
         }
 
         public override void SaveChangesFailed(DbContextErrorEventData eventData)
         {
             _capturedDomainEvents.Clear();
+            _capturedEntities.Clear();
             base.SaveChangesFailed(eventData);
+        }
+
+        private void AfterCommitDispatch(CancellationToken ct)
+        {
+            if (_capturedDomainEvents.Count == 0)
+                return;
+
+            var toDispatch = _capturedDomainEvents.ToList();
+            _capturedDomainEvents.Clear();
+
+            foreach (var entity in _capturedEntities)
+                entity.ClearDomainEvents();
+
+            _capturedEntities.Clear();
+
+            dispatcher.Dispatch(toDispatch, ct).GetAwaiter().GetResult();
+        }
+
+        private async Task AfterCommitDispatchAsync(CancellationToken ct)
+        {
+            if (_capturedDomainEvents.Count == 0)
+                return;
+
+            var toDispatch = _capturedDomainEvents.ToList();
+            _capturedDomainEvents.Clear();
+
+            foreach (var entity in _capturedEntities)
+                entity.ClearDomainEvents();
+
+            _capturedEntities.Clear();
+
+            await dispatcher.Dispatch(toDispatch, ct);
         }
     }
 }

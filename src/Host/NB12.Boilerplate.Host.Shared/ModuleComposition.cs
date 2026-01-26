@@ -1,4 +1,5 @@
 ﻿using NB12.Boilerplate.BuildingBlocks.Api.Modularity;
+using NB12.Boilerplate.Host.Shared.Ops;
 using NB12.Boilerplate.Modules.Audit.Api;
 using NB12.Boilerplate.Modules.Audit.Infrastructure;
 using NB12.Boilerplate.Modules.Auth.Api;
@@ -16,17 +17,19 @@ namespace NB12.Boilerplate.Host.Shared
         private static readonly IServiceModule[] _serviceModules =
         [
             new AuditServicesModule(),
-        new AuthServicesModule(),
-        new AuthApiServicesModule(),
-        // further modules …
+            new AuthServicesModule(),
+            new AuthApiServicesModule(),
+            // further modules …
     ];
 
         private static readonly IEndpointModule[] _endpointModules =
         [
             new AuthEndpointsModule(),
-        new AuthAdminEndpointsModule(),
-        new AuditEndpointsModule(),
-        // further modules …
+            new AuthAdminEndpointsModule(),
+            new AuditEndpointsModule(),
+            new AuditAdminEndpointsModule(),
+            new OpsEndpointsModule(),
+            // further modules …
     ];
 
         public static IServiceModule[] ServiceModules() => _serviceModules;

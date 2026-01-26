@@ -21,7 +21,23 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Outbox
                 builder.Property(x => x.Content).IsRequired();
                 builder.Property(x => x.OccurredAtUtc).IsRequired();
 
+                builder.Property(x => x.ProcessedAtUtc);
+                builder.Property(x => x.AttemptCount).IsRequired();
+                builder.Property(x => x.LastError);
+
+                builder.Property(x => x.LockedUntilUtc);
+                builder.Property(x => x.LockedBy);
+
+                builder.Property(x => x.DeadLetteredAtUtc);
+                builder.Property(x => x.DeadLetterReason);
+
                 builder.HasIndex(x => x.ProcessedAtUtc);
+                builder.HasIndex(x => x.LockedUntilUtc);
+                builder.HasIndex(x => x.DeadLetteredAtUtc);
+
+
+                builder.HasIndex(x => new { x.ProcessedAtUtc, x.DeadLetteredAtUtc, x.LockedUntilUtc });
+
             });
         }
     }

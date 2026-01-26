@@ -4,6 +4,7 @@ using NB12.Boilerplate.BuildingBlocks.Api.Middleware;
 using NB12.Boilerplate.BuildingBlocks.Api.Middleware.ETag;
 using NB12.Boilerplate.BuildingBlocks.Application.Behaviors;
 using NB12.Boilerplate.BuildingBlocks.Application.Eventing;
+using NB12.Boilerplate.BuildingBlocks.Application.Eventing.Integration;
 using NB12.Boilerplate.BuildingBlocks.Application.Messaging;
 using NB12.Boilerplate.BuildingBlocks.Application.Messaging.Abstractions;
 using NB12.Boilerplate.BuildingBlocks.Application.Validation;
@@ -34,6 +35,9 @@ var moduleAssemblies = ModuleComposition.ModuleAssemblies();
 
 // scanning
 builder.Services.AddEventBus(moduleAssemblies);
+
+// Inbox options (consumer-side idempotency for integration event handlers)
+builder.Services.Configure<InboxOptions>(builder.Configuration.GetSection("Inbox"));
 
 // Cross-cutting infrastructure (CurrentUser, dynamic permission policies, etc.)
 builder.Services.AddInfrastructureBuildingBlocks();

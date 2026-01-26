@@ -167,8 +167,20 @@ namespace NB12.Boilerplate.Modules.Auth.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("DeadLetterReason")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("DeadLetteredAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("LastError")
                         .HasColumnType("text");
+
+                    b.Property<string>("LockedBy")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("LockedUntilUtc")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("OccurredAtUtc")
                         .HasColumnType("timestamp with time zone");
@@ -182,7 +194,13 @@ namespace NB12.Boilerplate.Modules.Auth.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("DeadLetteredAtUtc");
+
+                    b.HasIndex("LockedUntilUtc");
+
                     b.HasIndex("ProcessedAtUtc");
+
+                    b.HasIndex("ProcessedAtUtc", "DeadLetteredAtUtc", "LockedUntilUtc");
 
                     b.ToTable("OutboxMessages", "auth");
                 });

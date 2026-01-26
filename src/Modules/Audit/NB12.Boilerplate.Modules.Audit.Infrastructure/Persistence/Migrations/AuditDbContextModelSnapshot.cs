@@ -68,8 +68,7 @@ namespace NB12.Boilerplate.Modules.Audit.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("IntegrationEventId")
-                        .IsUnique();
+                    b.HasIndex("IntegrationEventId");
 
                     b.HasIndex("OccurredAtUtc");
 
@@ -126,6 +125,46 @@ namespace NB12.Boilerplate.Modules.Audit.Infrastructure.Persistence.Migrations
                     b.HasIndex("TraceId");
 
                     b.ToTable("ErrorLogs", "audit");
+                });
+
+            modelBuilder.Entity("NB12.Boilerplate.Modules.Audit.Infrastructure.Inbox.InboxMessage", b =>
+                {
+                    b.Property<Guid>("IntegrationEventId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("HandlerName")
+                        .HasColumnType("text");
+
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("LastError")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("LastFailedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("LockedOwner")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("LockedUntilUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("ProcessedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("ReceivedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("IntegrationEventId", "HandlerName");
+
+                    b.HasIndex("LockedUntilUtc");
+
+                    b.HasIndex("ProcessedAtUtc");
+
+                    b.HasIndex("ReceivedAtUtc");
+
+                    b.ToTable("InboxMessages", "audit");
                 });
 #pragma warning restore 612, 618
         }

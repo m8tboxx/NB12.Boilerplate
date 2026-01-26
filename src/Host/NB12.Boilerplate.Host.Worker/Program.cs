@@ -1,4 +1,5 @@
 using NB12.Boilerplate.BuildingBlocks.Application.Eventing;
+using NB12.Boilerplate.BuildingBlocks.Application.Eventing.Integration;
 using NB12.Boilerplate.BuildingBlocks.Infrastructure;
 using NB12.Boilerplate.BuildingBlocks.Infrastructure.EventBus;
 using NB12.Boilerplate.BuildingBlocks.Infrastructure.Eventing;
@@ -6,6 +7,9 @@ using NB12.Boilerplate.Host.Shared;
 using NB12.Boilerplate.Host.Worker;
 using NB12.Boilerplate.Modules.Audit.Contracts.IntegrationEvents;
 using NB12.Boilerplate.Modules.Auth.Contracts.IntegrationEvents;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 
 var builder = Host.CreateApplicationBuilder(args);
 
@@ -37,6 +41,9 @@ builder.Services.AddEventBus(serviceAssemblies);
 // Outbox options
 builder.Services.Configure<OutboxOptions>(builder.Configuration.GetSection("Outbox"));
 
+// Inbox options (consumer-side idempotency for integration event handlers)
+builder.Services.Configure<InboxOptions>(builder.Configuration.GetSection("Inbox"));
+
 //Module DI
 foreach (var module in serviceModules)
     module.AddModule(builder.Services, builder.Configuration);
@@ -46,6 +53,24 @@ builder.Services.AddSingleton(sp => new IntegrationEventTypeRegistry(registryAss
 
 // Worker
 builder.Services.AddHostedService<OutboxPublisherWorker>();
+
+// OpenTelemetry (Tracing + Metrics)
+builder.Services.AddOpenTelemetry()
+    .ConfigureResource(r => r.AddService(
+        serviceName: "NB12.Boilerplate.Host.Worker",
+        serviceVersion: typeof(Program).Assembly.GetName().Version?.ToString() ?? "unknown"))
+    .WithTracing(tracing =>
+    {
+        tracing
+            .AddHttpClientInstrumentation(o => o.RecordException = true)
+            .AddOtlpExporter();
+    })
+    .WithMetrics(metrics =>
+    {
+        metrics
+            .AddMeter(InboxMetrics.MeterName)
+            .AddOtlpExporter();
+    });
 
 var host = builder.Build();
 host.Run();

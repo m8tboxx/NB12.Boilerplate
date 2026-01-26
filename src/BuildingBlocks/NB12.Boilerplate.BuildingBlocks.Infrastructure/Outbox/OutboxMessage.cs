@@ -11,8 +11,11 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Outbox
             string content,
             int attemptCount,
             DateTime? processedAtUtc,
-            string? lastError
-            )
+            string? lastError,
+             DateTime? lockedUntilUtc,
+            string? lockedBy,
+            DateTime? deadLetteredAtUtc,
+            string? deadLetterReason)
         {
             Id = id;
             OccurredAtUtc = occurredAtUtc;
@@ -21,6 +24,35 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Outbox
             AttemptCount = attemptCount;
             ProcessedAtUtc = processedAtUtc;
             LastError = lastError;
+            LockedUntilUtc = lockedUntilUtc;
+            LockedBy = lockedBy;
+            DeadLetteredAtUtc = deadLetteredAtUtc;
+            DeadLetterReason = deadLetterReason;
+        }
+
+        // Backwards-compatible constructor (NO locking args)
+        // -> used by Interceptors that enqueue new messages
+        public OutboxMessage(
+            OutboxMessageId id,
+            DateTime occurredAtUtc,
+            string type,
+            string content,
+            int attemptCount,
+            DateTime? processedAtUtc,
+            string? lastError)
+            : this(
+                id,
+                occurredAtUtc,
+                type,
+                content,
+                attemptCount,
+                processedAtUtc,
+                lastError,
+                lockedUntilUtc: null,
+                lockedBy: null,
+                deadLetteredAtUtc: null,
+                deadLetterReason: null)
+        {
         }
 
         public void MarkProcessed(DateTime processedAtUtc)
@@ -46,5 +78,12 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Outbox
         public DateTime? ProcessedAtUtc { get; private set; }
         public int AttemptCount { get; private set; }
         public string? LastError { get; private set; }
+
+        public DateTimeOffset? LockedUntilUtc { get; private set; }
+        public string? LockedBy { get; private set; }
+
+        // Dead-letter
+        public DateTime? DeadLetteredAtUtc { get; private set; }
+        public string? DeadLetterReason { get; private set; }
     }
 }

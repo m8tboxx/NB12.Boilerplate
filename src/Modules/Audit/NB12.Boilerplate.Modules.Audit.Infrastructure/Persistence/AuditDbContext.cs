@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using NB12.Boilerplate.Modules.Audit.Domain.Entities;
 using NB12.Boilerplate.Modules.Audit.Domain.Ids;
+using NB12.Boilerplate.Modules.Audit.Infrastructure.Inbox;
 
 namespace NB12.Boilerplate.Modules.Audit.Infrastructure.Persistence
 {
@@ -10,6 +11,7 @@ namespace NB12.Boilerplate.Modules.Audit.Infrastructure.Persistence
 
         public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
         public DbSet<ErrorLog> ErrorLogs => Set<ErrorLog>();
+        internal DbSet<InboxMessage> InboxMessages => Set<InboxMessage>();
 
         protected override void OnModelCreating(ModelBuilder b)
         {
@@ -40,7 +42,7 @@ namespace NB12.Boilerplate.Modules.Audit.Infrastructure.Persistence
 
                 e.HasIndex(x => x.OccurredAtUtc);
                 e.HasIndex(x => new { x.EntityType, x.EntityId });
-                e.HasIndex(x => x.IntegrationEventId).IsUnique();
+                e.HasIndex(x => x.IntegrationEventId);
                 e.HasIndex(x => new { x.Module, x.EntityType, x.EntityId });
             });
 
@@ -59,6 +61,29 @@ namespace NB12.Boilerplate.Modules.Audit.Infrastructure.Persistence
 
                 e.HasIndex(x => x.OccurredAtUtc);
                 e.HasIndex(x => x.TraceId);
+            });
+
+            b.Entity<InboxMessage>(e =>
+            {
+                e.ToTable("InboxMessages");
+                e.HasKey(x => new { x.IntegrationEventId, x.HandlerName });
+
+                e.Property(x => x.IntegrationEventId).IsRequired();
+                e.Property(x => x.HandlerName).IsRequired();
+
+                e.Property(x => x.ReceivedAtUtc).IsRequired();
+                e.Property(x => x.AttemptCount).IsRequired();
+
+                e.Property(x => x.LockedUntilUtc);
+                e.Property(x => x.LockedOwner);
+
+                e.Property(x => x.ProcessedAtUtc);
+                e.Property(x => x.LastError);
+                e.Property(x => x.LastFailedAtUtc);
+
+                e.HasIndex(x => x.ReceivedAtUtc);
+                e.HasIndex(x => x.ProcessedAtUtc);
+                e.HasIndex(x => x.LockedUntilUtc);
             });
         }
     }

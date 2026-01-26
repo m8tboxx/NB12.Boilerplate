@@ -15,6 +15,14 @@ namespace NB12.Boilerplate.Modules.Auth.Application.Security
             public const string UsersWrite = "auth.users.write";
 
             public const string MeRead = "auth.me.read";
+
+            // Outbox Admin
+            public const string OutboxRead = "auth.outbox.read";
+            public const string OutboxReplay = "auth.outbox.replay";
+            public const string OutboxDelete = "auth.outbox.delete";
+
+            // Ops / Operational Dashboard
+            public const string OpsRead = "ops.read";
         }
 
         public static IReadOnlyList<PermissionDefinition> All { get; } =
@@ -30,6 +38,14 @@ namespace NB12.Boilerplate.Modules.Auth.Application.Security
             new(Auth.UsersRolesWrite, "Manage user roles", "Assign/remove roles to/from users.", "Auth"),
 
             new(Auth.MeRead, "Read my profile", "Read current user's profile.", "Auth"),
+
+            // Outbox Admin
+            new(Auth.OutboxRead, "Read outbox", "List outbox messages (including failed).", "Auth"),
+            new(Auth.OutboxReplay, "Replay outbox messages", "Reset & replay outbox messages.", "Auth"),
+            new(Auth.OutboxDelete, "Delete outbox messages", "Delete outbox messages (maintenance).", "Auth"),
+
+            // Ops
+            new(Auth.OpsRead, "Read ops dashboard", "Read operational status dashboard.", "Ops")
         ];
     }
 }

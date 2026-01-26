@@ -17,6 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Modules\Audit\NB12.Boilerplate.Modules.Audit.Contracts\NB12.Boilerplate.Modules.Audit.Contracts.csproj" />
     <ProjectReference Include="..\NB12.Boilerplate.BuildingBlocks.Api\NB12.Boilerplate.BuildingBlocks.Api.csproj" />
     <ProjectReference Include="..\NB12.Boilerplate.BuildingBlocks.Application\NB12.Boilerplate.BuildingBlocks.Application.csproj" />
     <ProjectReference Include="..\NB12.Boilerplate.BuildingBlocks.Domain\NB12.Boilerplate.BuildingBlocks.Domain.csproj" />

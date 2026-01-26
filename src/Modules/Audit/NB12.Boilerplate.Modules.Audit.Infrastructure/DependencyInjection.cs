@@ -20,6 +20,18 @@ namespace NB12.Boilerplate.Modules.Audit.Infrastructure
             if (string.IsNullOrWhiteSpace(cs))
                 throw new InvalidOperationException("Connectionstring 'AuditDb' is missing");
 
+            // IMPORTANT:
+            // AddDbContextFactory is SINGLETON by default. That collides with scoped DbContextOptions from AddDbContext.
+            // Fix: register factory as SCOPED, and register it BEFORE AddDbContext.
+            services.AddDbContextFactory<AuditDbContext>(opt =>
+            {
+                opt.UseNpgsql(cs, npgsql =>
+                {
+                    npgsql.MigrationsAssembly(typeof(AuditDbContext).Assembly.FullName);
+                });
+            }, ServiceLifetime.Scoped);
+
+            // Scoped DbContext (writes / retention / anything transactional inside a request scope)
             services.AddDbContext<AuditDbContext>((sp, opt) =>
             {
                 opt.UseNpgsql(cs, npgsql =>

@@ -11,9 +11,10 @@ namespace NB12.Boilerplate.Modules.Auth.Infrastructure.Repositories
 {
     internal sealed class OutboxAdminRepository : IOutboxAdminRepository
     {
-        private readonly AuthDbContext _db;
+        private readonly IDbContextFactory<AuthDbContext> _dbFactory;
 
-        public OutboxAdminRepository(AuthDbContext db) => _db = db;
+        public OutboxAdminRepository(IDbContextFactory<AuthDbContext> dbFactory) 
+            => _dbFactory = dbFactory;
 
         public async Task<PagedResponse<OutboxMessageDto>> GetPagedAsync(
             DateTime? fromUtc,
@@ -24,7 +25,9 @@ namespace NB12.Boilerplate.Modules.Auth.Infrastructure.Repositories
             Sort sort,
             CancellationToken ct)
         {
-            IQueryable<OutboxMessage> q = _db.Set<OutboxMessage>().AsNoTracking();
+            await using var db = await _dbFactory.CreateDbContextAsync(ct);
+
+            IQueryable<OutboxMessage> q = db.Set<OutboxMessage>().AsNoTracking();
 
             q = ApplyFilters(q, fromUtc, toUtc, type, state);
 
@@ -56,7 +59,9 @@ namespace NB12.Boilerplate.Modules.Auth.Infrastructure.Repositories
             Sort sort,
             CancellationToken ct)
         {
-            IQueryable<OutboxMessage> q = _db.Set<OutboxMessage>().AsNoTracking();
+            await using var db = await _dbFactory.CreateDbContextAsync(ct);
+
+            IQueryable<OutboxMessage> q = db.Set<OutboxMessage>().AsNoTracking();
 
             q = ApplyFilters(q, fromUtc, toUtc, type, state);
 
@@ -82,9 +87,11 @@ namespace NB12.Boilerplate.Modules.Auth.Infrastructure.Repositories
 
         public async Task<OutboxMessageDetailsDto?> GetByIdAsync(Guid id, CancellationToken ct)
         {
+            await using var db = await _dbFactory.CreateDbContextAsync(ct);
+
             var key = new OutboxMessageId(id);
 
-            return await _db.Set<OutboxMessage>()
+            return await db.Set<OutboxMessage>()
                 .AsNoTracking()
                 .Where(x => x.Id == key)
                 .Select(x => new OutboxMessageDetailsDto(
@@ -100,10 +107,11 @@ namespace NB12.Boilerplate.Modules.Auth.Infrastructure.Repositories
 
         public async Task<OutboxStatsDto> GetStatsAsync(CancellationToken ct)
         {
-            // IMPORTANT: Do NOT run multiple async queries concurrently on the same DbContext.
+            await using var db = await _dbFactory.CreateDbContextAsync(ct);
+
             var now = DateTime.UtcNow;
 
-            var q = _db.Set<OutboxMessage>().AsNoTracking();
+            var q = db.Set<OutboxMessage>().AsNoTracking();
 
             var total = await q.LongCountAsync(ct);
 
@@ -120,7 +128,7 @@ namespace NB12.Boilerplate.Modules.Auth.Infrastructure.Repositories
                 .LongCountAsync(ct);
 
             // Locked columns are optional across versions; avoid EF.Property when not in the model.
-            var entityType = _db.Model.FindEntityType(typeof(OutboxMessage));
+            var entityType = db.Model.FindEntityType(typeof(OutboxMessage));
             var hasLockedUntil = entityType?.FindProperty("LockedUntilUtc") is not null;
 
             long locked = 0;
@@ -158,15 +166,17 @@ namespace NB12.Boilerplate.Modules.Auth.Infrastructure.Repositories
 
         public async Task<bool> ReplayAsync(Guid id, CancellationToken ct)
         {
+            await using var db = await _dbFactory.CreateDbContextAsync(ct);
+
             var key = new OutboxMessageId(id);
 
-            var msg = await _db.Set<OutboxMessage>()
+            var msg = await db.Set<OutboxMessage>()
                 .SingleOrDefaultAsync(x => x.Id == key, ct);
 
             if (msg is null)
                 return false;
 
-            var entry = _db.Entry(msg);
+            var entry = db.Entry(msg);
 
             entry.Property(nameof(OutboxMessage.ProcessedAtUtc)).CurrentValue = null;
             entry.Property(nameof(OutboxMessage.AttemptCount)).CurrentValue = 0;
@@ -178,15 +188,17 @@ namespace NB12.Boilerplate.Modules.Auth.Infrastructure.Repositories
             ResetIfPresent(entry, "DeadLetteredAtUtc", null);
             ResetIfPresent(entry, "DeadLetterReason", null);
 
-            await _db.SaveChangesAsync(ct);
+            await db.SaveChangesAsync(ct);
             return true;
         }
 
         public async Task<bool> DeleteAsync(Guid id, CancellationToken ct)
         {
+            await using var db = await _dbFactory.CreateDbContextAsync(ct);
+
             var key = new OutboxMessageId(id);
 
-            var affected = await _db.Set<OutboxMessage>()
+            var affected = await db.Set<OutboxMessage>()
                 .Where(x => x.Id == key)
                 .ExecuteDeleteAsync(ct);
 

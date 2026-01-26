@@ -55,6 +55,18 @@ namespace NB12.Boilerplate.Modules.Auth.Infrastructure
                .ValidateDataAnnotations()
                .ValidateOnStart();
 
+            // IMPORTANT:
+            // AddDbContextFactory is SINGLETON by default. That collides with scoped DbContextOptions from AddDbContext.
+            // Fix: register factory as SCOPED, and register it BEFORE AddDbContext so Identity/scoped context stays intact.
+            services.AddDbContextFactory<AuthDbContext>((sp, options) =>
+            {
+                options.UseNpgsql(connectionString, npgsql =>
+                {
+                    npgsql.MigrationsAssembly(typeof(AuthDbContext).Assembly.FullName);
+                });
+            }, ServiceLifetime.Scoped);
+
+            // Scoped DbContext for Identity / transactional commands (with interceptors)
             services.AddDbContext<AuthDbContext>((sp, options) =>
             {
                 options.UseNpgsql(connectionString, npgsql =>

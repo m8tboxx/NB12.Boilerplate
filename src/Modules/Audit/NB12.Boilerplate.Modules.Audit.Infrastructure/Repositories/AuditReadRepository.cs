@@ -9,9 +9,10 @@ namespace NB12.Boilerplate.Modules.Audit.Infrastructure.Repositories
 {
     internal sealed class AuditReadRepository : IAuditReadRepository
     {
-        private readonly AuditDbContext _db;
+        private readonly IDbContextFactory<AuditDbContext> _dbFactory;
 
-        public AuditReadRepository(AuditDbContext db) => _db = db;
+        public AuditReadRepository(IDbContextFactory<AuditDbContext> dbFactory) 
+            => _dbFactory = dbFactory;
 
         public async Task<PagedResponse<AuditLogDto>> GetAuditLogsAsync(
             DateTime? fromUtc,
@@ -25,7 +26,9 @@ namespace NB12.Boilerplate.Modules.Audit.Infrastructure.Repositories
             Sort sort,
             CancellationToken ct)
         {
-            var query = _db.AuditLogs.AsNoTracking().AsQueryable();
+            await using var db = await _dbFactory.CreateDbContextAsync(ct);
+
+            var query = db.AuditLogs.AsNoTracking().AsQueryable();
 
             if (fromUtc is not null) query = query.Where(x => x.OccurredAtUtc >= fromUtc);
             if (toUtc is not null) query = query.Where(x => x.OccurredAtUtc <= toUtc);
@@ -71,7 +74,9 @@ namespace NB12.Boilerplate.Modules.Audit.Infrastructure.Repositories
             Sort sort,
             CancellationToken ct)
         {
-            var query = _db.ErrorLogs.AsNoTracking().AsQueryable();
+            await using var db = await _dbFactory.CreateDbContextAsync(ct);
+
+            var query = db.ErrorLogs.AsNoTracking().AsQueryable();
 
             if (fromUtc is not null) query = query.Where(x => x.OccurredAtUtc >= fromUtc);
             if (toUtc is not null) query = query.Where(x => x.OccurredAtUtc <= toUtc);

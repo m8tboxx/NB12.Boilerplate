@@ -27,11 +27,11 @@ namespace NB12.Boilerplate.Modules.Audit.Infrastructure.Inbox
 
             // Ensure row exists
             var insertSql = $@"
-                INSERT INTO {table} (""IntegrationEventId"", ""HandlerName"", ""ReceivedAtUtc"", ""AttemptCount"")
-                VALUES ({{0}}, {{1}}, {{2}}, 0)
+                INSERT INTO {table} (""Id"", ""IntegrationEventId"", ""HandlerName"", ""ReceivedAtUtc"", ""AttemptCount"", ""EventType"", ""PayloadJson"")
+                VALUES ({{0}}, {{1}}, {{2}}, {{3}}, 0, {{4}}, CAST({{5}} AS jsonb))
                 ON CONFLICT (""IntegrationEventId"", ""HandlerName"") DO NOTHING;";
 
-            await db.Database.ExecuteSqlRawAsync(insertSql, new object[] { integrationEventId, handlerName, utcNow }, ct);
+            await db.Database.ExecuteSqlRawAsync(insertSql, new object[] { Guid.NewGuid(), integrationEventId, handlerName, utcNow, string.Empty, "{ }" }, ct);
 
             // Claim if not processed and not locked (or lock expired)
             var updateSql = $@"

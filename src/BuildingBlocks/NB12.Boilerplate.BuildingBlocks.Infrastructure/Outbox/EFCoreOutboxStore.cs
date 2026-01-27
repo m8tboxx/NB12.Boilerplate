@@ -77,13 +77,13 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Outbox
                         ""DeadLetteredAtUtc"" = {{1}},
                         ""DeadLetterReason"" = {{2}},
                         ""LockedUntilUtc"" = NULL,
-                        ""LockedOwner"" = NULL
+                        ""LockedBy"" = NULL
                     WHERE ""Id"" = {{3}}
-                      AND ""LockedOwner"" = {{4}}
+                      AND ""LockedBy"" = {{4}}
                       AND ""ProcessedAtUtc"" IS NULL
                       AND ""DeadLetteredAtUtc"" IS NULL;";
 
-                await db.Database.ExecuteSqlRawAsync(sql, new object[] { ex.ToString(), id.Value, lockOwner }, ct);
+                await db.Database.ExecuteSqlRawAsync(sql, new object[] { ex.ToString(), reason, id.Value, lockOwner }, ct);
 
                 return;
             }
@@ -93,19 +93,20 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Outbox
                 throw new ArgumentException("Retry plan requires NextVisibleAtUtc.", nameof(plan));
 
             var nextVisibleAtUtc = plan.NextVisibleAtUtc.Value;
+            var nextVisibleAt = new DateTimeOffset(nextVisibleAtUtc);
 
             var retrySql = $@"
                 UPDATE {table}
                 SET ""AttemptCount"" = ""AttemptCount"" + 1,
                     ""LastError"" = {{0}},
                     ""LockedUntilUtc"" = {{1}},
-                    ""LockedOwner"" = NULL
+                    ""LockedBy"" = NULL
                 WHERE ""Id"" = {{2}}
-                  AND ""LockedOwner"" = {{3}}
+                  AND ""LockedBy"" = {{3}}
                   AND ""ProcessedAtUtc"" IS NULL
                   AND ""DeadLetteredAtUtc"" IS NULL;";
 
-            await db.Database.ExecuteSqlRawAsync(retrySql, new object[] { ex.ToString(), nextVisibleAtUtc, id.Value, lockOwner }, ct);
+            await db.Database.ExecuteSqlRawAsync(retrySql, new object[] { ex.ToString(), nextVisibleAt, id.Value, lockOwner }, ct);
         }
 
 

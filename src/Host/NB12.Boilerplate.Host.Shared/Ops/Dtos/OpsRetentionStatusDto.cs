@@ -3,7 +3,7 @@
     public sealed record OpsRetentionStatusDto(
         bool Enabled,
         DateTime? LastRunAtUtc,
-        int? LastDeletedAuditLogs,
-        int? LastDeletedErrorLogs,
+        long? LastDeletedAuditLogs,
+        long? LastDeletedErrorLogs,
         string? LastError);
 }

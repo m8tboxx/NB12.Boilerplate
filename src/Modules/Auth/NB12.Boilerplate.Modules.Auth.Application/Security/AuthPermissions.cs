@@ -23,6 +23,7 @@ namespace NB12.Boilerplate.Modules.Auth.Application.Security
 
             // Ops / Operational Dashboard
             public const string OpsRead = "ops.read";
+            public const string OpsWrite = "ops.write";
         }
 
         public static IReadOnlyList<PermissionDefinition> All { get; } =
@@ -45,7 +46,8 @@ namespace NB12.Boilerplate.Modules.Auth.Application.Security
             new(Auth.OutboxDelete, "Delete outbox messages", "Delete outbox messages (maintenance).", "Auth"),
 
             // Ops
-            new(Auth.OpsRead, "Read ops dashboard", "Read operational status dashboard.", "Ops")
+            new(Auth.OpsRead, "Read ops dashboard", "Read operational status dashboard.", "Ops"),
+            new(Auth.OpsWrite, "Write ops", "Wrirte operational data", "Ops")
         ];
     }
 }

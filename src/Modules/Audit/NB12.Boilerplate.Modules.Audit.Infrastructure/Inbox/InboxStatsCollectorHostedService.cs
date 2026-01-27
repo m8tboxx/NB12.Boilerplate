@@ -36,7 +36,7 @@ namespace NB12.Boilerplate.Modules.Audit.Infrastructure.Inbox
                             COUNT(*)::bigint AS total,
                             COUNT(*) FILTER (WHERE ""ProcessedAtUtc"" IS NULL)::bigint AS pending,
                             COUNT(*) FILTER (WHERE ""ProcessedAtUtc"" IS NOT NULL)::bigint AS processed,
-                            COUNT(*) FILTER (WHERE ""ProcessedAtUtc"" IS NULL AND ""LastFailedAtUtc"" IS NOT NULL)::bigint AS failed,
+                            COUNT(*) FILTER (WHERE ""ProcessedAtUtc"" IS NULL AND ""DeadLetteredAtUtc"" IS NOT NULL)::bigint AS failed,
                             COUNT(*) FILTER (WHERE ""ProcessedAtUtc"" IS NULL AND ""LockedUntilUtc"" IS NOT NULL AND ""LockedUntilUtc"" > {0})::bigint AS locked
                         FROM ""audit"".""InboxMessages""";
 

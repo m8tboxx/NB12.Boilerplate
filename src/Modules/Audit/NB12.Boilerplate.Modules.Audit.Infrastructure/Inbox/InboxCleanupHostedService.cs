@@ -58,8 +58,8 @@ namespace NB12.Boilerplate.Modules.Audit.Infrastructure.Inbox
                         var deleteFailedSql = @"
                             DELETE FROM ""audit"".""InboxMessages""
                             WHERE ""ProcessedAtUtc"" IS NULL
-                              AND ""LastFailedAtUtc"" IS NOT NULL
-                              AND ""LastFailedAtUtc"" < {0}
+                              AND ""DeadLetteredAtUtc"" IS NOT NULL
+                              AND ""DeadLetteredAtUtc"" < {0}
                               AND (""LockedUntilUtc"" IS NULL OR ""LockedUntilUtc"" < {1})";
 
                         deletedFailed = await db.Database.ExecuteSqlRawAsync(

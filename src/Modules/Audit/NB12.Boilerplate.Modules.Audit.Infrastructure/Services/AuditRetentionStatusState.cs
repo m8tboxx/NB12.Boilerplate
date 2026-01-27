@@ -1,36 +1,56 @@
-﻿using NB12.Boilerplate.Modules.Audit.Application.Interfaces;
-using NB12.Boilerplate.Modules.Audit.Application.Responses;
+﻿using NB12.Boilerplate.Modules.Audit.Application.Responses;
 
 namespace NB12.Boilerplate.Modules.Audit.Infrastructure.Services
 {
-    internal sealed class AuditRetentionStatusState : IAuditRetentionStatusProvider
+    public sealed class AuditRetentionStatusState
     {
-        private AuditRetentionStatusDto _status = new(
-            Enabled: false,
-            LastRunAtUtc: null,
-            LastDeletedAuditLogs: null,
-            LastDeletedErrorLogs: null,
-            LastError: null);
+        private readonly object _lock = new();
 
-        public AuditRetentionStatusDto GetStatus() => _status;
+        private bool _enabled;
+        private DateTime? _lastRunAtUtc;
+        private long _lastDeletedAuditLogs;
+        private long _lastDeletedErrorLogs;
+        private string? _lastError;
 
         public void SetEnabled(bool enabled)
-            => _status = _status with { Enabled = enabled };
+        {
+            lock (_lock)
+            {
+                _enabled = enabled;
+            }
+        }
 
-        public void SetSuccess(DateTime ranAtUtc, int deletedAuditLogs, int deletedErrorLogs)
-            => _status = new AuditRetentionStatusDto(
-                Enabled: _status.Enabled,
-                LastRunAtUtc: ranAtUtc,
-                LastDeletedAuditLogs: deletedAuditLogs,
-                LastDeletedErrorLogs: deletedErrorLogs,
-                LastError: null);
+        public void RecordSuccess(DateTime runAtUtc, long deletedAuditLogs, long deletedErrorLogs)
+        {
+            lock (_lock)
+            {
+                _lastRunAtUtc = runAtUtc;
+                _lastDeletedAuditLogs = deletedAuditLogs;
+                _lastDeletedErrorLogs = deletedErrorLogs;
+                _lastError = null;
+            }
+        }
 
-        public void SetFailure(DateTime failedAtUtc, string error)
-            => _status = new AuditRetentionStatusDto(
-                Enabled: _status.Enabled,
-                LastRunAtUtc: failedAtUtc,
-                LastDeletedAuditLogs: _status.LastDeletedAuditLogs,
-                LastDeletedErrorLogs: _status.LastDeletedErrorLogs,
-                LastError: error);
+        public void RecordError(DateTime runAtUtc, string error)
+        {
+            lock (_lock)
+            {
+                _lastRunAtUtc = runAtUtc;
+                _lastError = error;
+            }
+        }
+
+        public AuditRetentionStatusDto Snapshot()
+        {
+            lock (_lock)
+            {
+                return new AuditRetentionStatusDto(
+                    Enabled: _enabled,
+                    LastRunAtUtc: _lastRunAtUtc,
+                    LastDeletedAuditLogs: _lastDeletedAuditLogs,
+                    LastDeletedErrorLogs: _lastDeletedErrorLogs,
+                    LastError: _lastError);
+            }
+        }
     }
 }

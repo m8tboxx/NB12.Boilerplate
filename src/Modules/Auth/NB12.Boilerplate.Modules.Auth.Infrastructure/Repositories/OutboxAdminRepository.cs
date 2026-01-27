@@ -2,10 +2,12 @@
 using NB12.Boilerplate.BuildingBlocks.Application.Querying;
 using NB12.Boilerplate.BuildingBlocks.Infrastructure.Ids;
 using NB12.Boilerplate.BuildingBlocks.Infrastructure.Outbox;
+using NB12.Boilerplate.BuildingBlocks.Infrastructure.Persistence;
 using NB12.Boilerplate.Modules.Auth.Application.Enums;
 using NB12.Boilerplate.Modules.Auth.Application.Interfaces;
 using NB12.Boilerplate.Modules.Auth.Application.Responses;
 using NB12.Boilerplate.Modules.Auth.Infrastructure.Persistence;
+using System.Data;
 
 namespace NB12.Boilerplate.Modules.Auth.Infrastructure.Repositories
 {
@@ -105,63 +107,139 @@ namespace NB12.Boilerplate.Modules.Auth.Infrastructure.Repositories
                 .SingleOrDefaultAsync(ct);
         }
 
+        //public async Task<OutboxStatsDto> GetStatsAsync(CancellationToken ct)
+        //{
+        //    await using var db = await _dbFactory.CreateDbContextAsync(ct);
+
+        //    var now = DateTime.UtcNow;
+
+        //    var q = db.Set<OutboxMessage>().AsNoTracking();
+
+        //    var total = await q.LongCountAsync(ct);
+
+        //    var processed = await q
+        //        .Where(x => x.ProcessedAtUtc != null)
+        //        .LongCountAsync(ct);
+
+        //    var pending = await q
+        //        .Where(x => x.ProcessedAtUtc == null && x.AttemptCount == 0)
+        //        .LongCountAsync(ct);
+
+        //    var failed = await q
+        //        .Where(x => x.ProcessedAtUtc == null && x.AttemptCount > 0)
+        //        .LongCountAsync(ct);
+
+        //    // Locked columns are optional across versions; avoid EF.Property when not in the model.
+        //    var entityType = db.Model.FindEntityType(typeof(OutboxMessage));
+        //    var hasLockedUntil = entityType?.FindProperty("LockedUntilUtc") is not null;
+
+        //    long locked = 0;
+        //    if (hasLockedUntil)
+        //    {
+        //        locked = await q
+        //            .Where(x =>
+        //                x.ProcessedAtUtc == null
+        //                && EF.Property<DateTime?>(x, "LockedUntilUtc") != null
+        //                && EF.Property<DateTime?>(x, "LockedUntilUtc")! > now)
+        //            .LongCountAsync(ct);
+        //    }
+
+        //    var oldestPending = await q
+        //        .Where(x => x.ProcessedAtUtc == null)
+        //        .OrderBy(x => x.OccurredAtUtc)
+        //        .Select(x => (DateTime?)x.OccurredAtUtc)
+        //        .FirstOrDefaultAsync(ct);
+
+        //    var oldestFailed = await q
+        //        .Where(x => x.ProcessedAtUtc == null && x.AttemptCount > 0)
+        //        .OrderBy(x => x.OccurredAtUtc)
+        //        .Select(x => (DateTime?)x.OccurredAtUtc)
+        //        .FirstOrDefaultAsync(ct);
+
+        //    return new OutboxStatsDto(
+        //        Total: total,
+        //        Pending: pending,
+        //        Failed: failed,
+        //        Processed: processed,
+        //        Locked: locked,
+        //        OldestPendingOccurredAtUtc: oldestPending,
+        //        OldestFailedOccurredAtUtc: oldestFailed);
+        //}
+
         public async Task<OutboxStatsDto> GetStatsAsync(CancellationToken ct)
         {
             await using var db = await _dbFactory.CreateDbContextAsync(ct);
 
             var now = DateTime.UtcNow;
 
-            var q = db.Set<OutboxMessage>().AsNoTracking();
+            var (table, storeId, et) = EfPostgresSql.Table<OutboxMessage>(db);
 
-            var total = await q.LongCountAsync(ct);
+            var occurredAt = EfPostgresSql.Column(et, storeId, nameof(OutboxMessage.OccurredAtUtc));
+            var processedAt = EfPostgresSql.Column(et, storeId, nameof(OutboxMessage.ProcessedAtUtc));
+            var attemptCount = EfPostgresSql.Column(et, storeId, nameof(OutboxMessage.AttemptCount));
 
-            var processed = await q
-                .Where(x => x.ProcessedAtUtc != null)
-                .LongCountAsync(ct);
+            var hasLockedUntil = EfPostgresSql.HasProperty(et, "LockedUntilUtc");
+            var lockedExpr = hasLockedUntil
+                ? $"COUNT(*) FILTER (WHERE {processedAt} IS NULL AND {EfPostgresSql.Column(et, storeId, "LockedUntilUtc")} IS NOT NULL AND {EfPostgresSql.Column(et, storeId, "LockedUntilUtc")} > @now)"
+                : "0";
 
-            var pending = await q
-                .Where(x => x.ProcessedAtUtc == null && x.AttemptCount == 0)
-                .LongCountAsync(ct);
+            var sql = $@"
+                SELECT
+                    COUNT(*)::bigint                                              AS total,
+                    COUNT(*) FILTER (WHERE {processedAt} IS NOT NULL)::bigint      AS processed,
+                    COUNT(*) FILTER (WHERE {processedAt} IS NULL AND {attemptCount} = 0)::bigint AS pending,
+                    COUNT(*) FILTER (WHERE {processedAt} IS NULL AND {attemptCount} > 0)::bigint AS failed,
+                    ({lockedExpr})::bigint                                         AS locked,
+                    MIN({occurredAt}) FILTER (WHERE {processedAt} IS NULL)         AS oldest_pending,
+                    MIN({occurredAt}) FILTER (WHERE {processedAt} IS NULL AND {attemptCount} > 0) AS oldest_failed
+                FROM {table}";
 
-            var failed = await q
-                .Where(x => x.ProcessedAtUtc == null && x.AttemptCount > 0)
-                .LongCountAsync(ct);
+            var conn = db.Database.GetDbConnection();
+            var shouldClose = conn.State != ConnectionState.Open;
 
-            // Locked columns are optional across versions; avoid EF.Property when not in the model.
-            var entityType = db.Model.FindEntityType(typeof(OutboxMessage));
-            var hasLockedUntil = entityType?.FindProperty("LockedUntilUtc") is not null;
+            if (shouldClose)
+                await conn.OpenAsync(ct);
 
-            long locked = 0;
-            if (hasLockedUntil)
+            try
             {
-                locked = await q
-                    .Where(x =>
-                        x.ProcessedAtUtc == null
-                        && EF.Property<DateTime?>(x, "LockedUntilUtc") != null
-                        && EF.Property<DateTime?>(x, "LockedUntilUtc")! > now)
-                    .LongCountAsync(ct);
+                await using var cmd = conn.CreateCommand();
+                cmd.CommandText = sql;
+                cmd.CommandType = CommandType.Text;
+
+                var pNow = cmd.CreateParameter();
+                pNow.ParameterName = "now";
+                pNow.Value = now;
+                cmd.Parameters.Add(pNow);
+
+                await using var reader = await cmd.ExecuteReaderAsync(ct);
+                if (!await reader.ReadAsync(ct))
+                {
+                    return new OutboxStatsDto(0, 0, 0, 0, 0, null, null);
+                }
+
+                var total = reader.GetInt64(0);
+                var processed = reader.GetInt64(1);
+                var pending = reader.GetInt64(2);
+                var failed = reader.GetInt64(3);
+                var locked = reader.GetInt64(4);
+
+                DateTime? oldestPending = reader.IsDBNull(5) ? null : reader.GetFieldValue<DateTime>(5);
+                DateTime? oldestFailed = reader.IsDBNull(6) ? null : reader.GetFieldValue<DateTime>(6);
+
+                return new OutboxStatsDto(
+                    Total: total,
+                    Pending: pending,
+                    Failed: failed,
+                    Processed: processed,
+                    Locked: locked,
+                    OldestPendingOccurredAtUtc: oldestPending,
+                    OldestFailedOccurredAtUtc: oldestFailed);
             }
-
-            var oldestPending = await q
-                .Where(x => x.ProcessedAtUtc == null)
-                .OrderBy(x => x.OccurredAtUtc)
-                .Select(x => (DateTime?)x.OccurredAtUtc)
-                .FirstOrDefaultAsync(ct);
-
-            var oldestFailed = await q
-                .Where(x => x.ProcessedAtUtc == null && x.AttemptCount > 0)
-                .OrderBy(x => x.OccurredAtUtc)
-                .Select(x => (DateTime?)x.OccurredAtUtc)
-                .FirstOrDefaultAsync(ct);
-
-            return new OutboxStatsDto(
-                Total: total,
-                Pending: pending,
-                Failed: failed,
-                Processed: processed,
-                Locked: locked,
-                OldestPendingOccurredAtUtc: oldestPending,
-                OldestFailedOccurredAtUtc: oldestFailed);
+            finally
+            {
+                if (shouldClose)
+                    await conn.CloseAsync();
+            }
         }
 
         public async Task<bool> ReplayAsync(Guid id, CancellationToken ct)

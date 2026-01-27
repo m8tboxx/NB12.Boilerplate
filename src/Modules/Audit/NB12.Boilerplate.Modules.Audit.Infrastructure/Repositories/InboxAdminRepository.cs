@@ -1,19 +1,23 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using NB12.Boilerplate.BuildingBlocks.Application.Querying;
+using NB12.Boilerplate.BuildingBlocks.Infrastructure.Persistence;
 using NB12.Boilerplate.Modules.Audit.Application.Enums;
 using NB12.Boilerplate.Modules.Audit.Application.Interfaces;
 using NB12.Boilerplate.Modules.Audit.Application.Responses;
+using NB12.Boilerplate.Modules.Audit.Domain.Ids;
+using NB12.Boilerplate.Modules.Audit.Infrastructure.Inbox;
 using NB12.Boilerplate.Modules.Audit.Infrastructure.Persistence;
 using Npgsql;
-using System.Text;
+using System.Data;
 
 namespace NB12.Boilerplate.Modules.Audit.Infrastructure.Repositories
 {
     internal sealed class InboxAdminRepository : IInboxAdminRepository
     {
-        private readonly AuditDbContext _db;
+        private readonly IDbContextFactory<AuditDbContext> _dbFactory;
 
-        public InboxAdminRepository(AuditDbContext db) => _db = db;
+        public InboxAdminRepository(IDbContextFactory<AuditDbContext> dbFactory) 
+            => _dbFactory = dbFactory;
 
         public async Task<PagedResponse<InboxMessageDto>> GetPagedAsync(
             Guid? integrationEventId,
@@ -25,78 +29,187 @@ namespace NB12.Boilerplate.Modules.Audit.Infrastructure.Repositories
             Sort sort,
             CancellationToken ct)
         {
-            var (whereSql, parameters) = BuildWhere(integrationEventId, handlerName, state, fromUtc, toUtc);
+            await using var db = await _dbFactory.CreateDbContextAsync(ct);
 
-            var totalSql = $"SELECT COUNT(*)::bigint AS \"Value\" FROM \"audit\".\"InboxMessages\" {whereSql}" ;
-            var total = await _db.Database.SqlQueryRaw<long>(totalSql, parameters.ToArray()).SingleAsync(ct);
+            IQueryable<InboxMessage> q = db.InboxMessages.AsNoTracking();
 
-            var (orderBySql, dirSql) = BuildOrderBy(sort);
-            var sql = new StringBuilder();
-            sql.Append("SELECT ");
-            sql.Append("\"IntegrationEventId\", \"HandlerName\", \"ReceivedAtUtc\", \"ProcessedAtUtc\", ");
-            sql.Append("\"AttemptCount\", \"LastFailedAtUtc\", \"LastError\", \"LockedUntilUtc\", \"LockedOwner\" ");
-            sql.Append("FROM \"audit\".\"InboxMessages\" ");
-            sql.Append(whereSql);
-            sql.Append($" ORDER BY {orderBySql} {dirSql} ");
-            sql.Append("OFFSET @skip LIMIT @take;");
+            if (integrationEventId is not null)
+                q = q.Where(x => x.IntegrationEventId == integrationEventId.Value);
 
-            parameters.Add(new NpgsqlParameter("skip", page.Skip));
-            parameters.Add(new NpgsqlParameter("take", page.PageSize));
+            if (!string.IsNullOrWhiteSpace(handlerName))
+                q = q.Where(x => EF.Functions.ILike(x.HandlerName, $"%{handlerName}%"));
 
-            var rows = await _db.Database.SqlQueryRaw<InboxRow>(sql.ToString(), parameters.ToArray())
+            if (fromUtc is not null)
+                q = q.Where(x => x.ReceivedAtUtc >= fromUtc.Value);
+
+            if (toUtc is not null)
+                q = q.Where(x => x.ReceivedAtUtc <= toUtc.Value);
+
+            q = state switch
+            {
+                InboxMessageState.Pending => q.Where(x => x.ProcessedAtUtc == null && x.AttemptCount == 0 && x.DeadLetteredAtUtc == null),
+                InboxMessageState.Failed => q.Where(x => x.ProcessedAtUtc == null && x.AttemptCount > 0 && x.DeadLetteredAtUtc == null),
+                InboxMessageState.Processed => q.Where(x => x.ProcessedAtUtc != null),
+                InboxMessageState.DeadLettered => q.Where(x => x.DeadLetteredAtUtc != null),
+                _ => q
+            };
+
+            var total = await q.LongCountAsync(ct);
+
+            q = ApplySort(q, sort);
+
+            var items = await q
+                .Skip(page.Skip)
+                .Take(page.PageSize)
+                .Select(x => new InboxMessageDto(
+                    x.Id,
+                    x.IntegrationEventId,
+                    x.HandlerName,
+                    x.EventType,
+                    x.ReceivedAtUtc,
+                    x.ProcessedAtUtc,
+                    x.AttemptCount,
+                    x.LastError,
+                    x.LockedUntilUtc,
+                    x.LockedOwner,
+                    x.DeadLetteredAtUtc,
+                    x.DeadLetterReason))
                 .ToListAsync(ct);
-
-            var items = rows.Select(r => new InboxMessageDto(
-                r.IntegrationEventId,
-                r.HandlerName,
-                r.ReceivedAtUtc,
-                r.ProcessedAtUtc,
-                r.AttemptCount,
-                r.LastFailedAtUtc,
-                r.LastError,
-                r.LockedUntilUtc,
-                r.LockedOwner
-            )).ToList();
 
             return new PagedResponse<InboxMessageDto>(items, page.Page, page.PageSize, total);
         }
 
+        public async Task<InboxMessageDetailsDto?> GetByIdAsync(InboxMessageId id, CancellationToken ct)
+        {
+            await using var db = await _dbFactory.CreateDbContextAsync(ct);
+
+            return await db.InboxMessages
+                .AsNoTracking()
+                .Where(x => x.Id == id)
+                .Select(x => new InboxMessageDetailsDto(
+                    x.Id,
+                    x.IntegrationEventId,
+                    x.HandlerName,
+                    x.EventType,
+                    x.PayloadJson,
+                    x.ReceivedAtUtc,
+                    x.ProcessedAtUtc,
+                    x.AttemptCount,
+                    x.LastError,
+                    x.LockedUntilUtc,
+                    x.LockedOwner,
+                    x.DeadLetteredAtUtc,
+                    x.DeadLetterReason))
+                .SingleOrDefaultAsync(ct);
+        }
+
         public async Task<InboxStatsDto> GetStatsAsync(CancellationToken ct)
         {
-            var total = await ScalarAsync<long>(
-                "SELECT COUNT(*)::bigint AS \"Value\" FROM \"audit\".\"InboxMessages\";", ct);
+            await using var db = await _dbFactory.CreateDbContextAsync(ct);
 
-            var pending = await ScalarAsync<long>(
-                "SELECT COUNT(*)::bigint AS \"Value\" FROM \"audit\".\"InboxMessages\" WHERE \"ProcessedAtUtc\" IS NULL;",
-                ct);
+            var now = DateTime.UtcNow;
 
-            var failed = await ScalarAsync<long>(
-                "SELECT COUNT(*)::bigint AS \"Value\" FROM \"audit\".\"InboxMessages\" WHERE \"ProcessedAtUtc\" IS NULL AND \"AttemptCount\" > 0;",
-                ct);
+            var (table, storeId, et) = EfPostgresSql.Table<InboxMessage>(db);
 
-            var processed = await ScalarAsync<long>(
-                "SELECT COUNT(*)::bigint AS \"Value\" FROM \"audit\".\"InboxMessages\" WHERE \"ProcessedAtUtc\" IS NOT NULL;",
-                ct);
+            var receivedAt = EfPostgresSql.Column(et, storeId, nameof(InboxMessage.ReceivedAtUtc));
+            var processedAt = EfPostgresSql.Column(et, storeId, nameof(InboxMessage.ProcessedAtUtc));
+            var attemptCount = EfPostgresSql.Column(et, storeId, nameof(InboxMessage.AttemptCount));
 
-            var locked = await ScalarAsync<long>(
-                "SELECT COUNT(*)::bigint AS \"Value\" FROM \"audit\".\"InboxMessages\" WHERE \"LockedUntilUtc\" IS NOT NULL AND \"LockedUntilUtc\" > NOW() AT TIME ZONE 'UTC';",
-                ct);
+            var hasLockedUntil = EfPostgresSql.HasProperty(et, "LockedUntilUtc");
+            var lockedExpr = hasLockedUntil
+                ? $"COUNT(*) FILTER (WHERE {processedAt} IS NULL AND {EfPostgresSql.Column(et, storeId, "LockedUntilUtc")} IS NOT NULL AND {EfPostgresSql.Column(et, storeId, "LockedUntilUtc")} > @now)"
+                : "0";
 
-            var oldestPending = await ScalarAsync<DateTime?>(
-                "SELECT MIN(\"ReceivedAtUtc\") AS \"Value\" FROM \"audit\".\"InboxMessages\" WHERE \"ProcessedAtUtc\" IS NULL;",
-                ct);
+            var sql = $@"
+                SELECT
+                    COUNT(*)::bigint                                              AS total,
+                    COUNT(*) FILTER (WHERE {processedAt} IS NOT NULL)::bigint      AS processed,
+                    COUNT(*) FILTER (WHERE {processedAt} IS NULL AND {attemptCount} = 0)::bigint AS pending,
+                    COUNT(*) FILTER (WHERE {processedAt} IS NULL AND {attemptCount} > 0)::bigint AS failed,
+                    ({lockedExpr})::bigint                                         AS locked,
+                    MIN({receivedAt}) FILTER (WHERE {processedAt} IS NULL)         AS oldest_pending,
+                    MIN({receivedAt}) FILTER (WHERE {processedAt} IS NULL AND {attemptCount} > 0) AS oldest_failed
+                FROM {table}";
 
-            var oldestFailed = await ScalarAsync<DateTime?>(
-                "SELECT MIN(\"ReceivedAtUtc\") AS \"Value\" FROM \"audit\".\"InboxMessages\" WHERE \"ProcessedAtUtc\" IS NULL AND \"AttemptCount\" > 0;",
-                ct);
+            var conn = db.Database.GetDbConnection();
+            var shouldClose = conn.State != ConnectionState.Open;
 
-            return new InboxStatsDto(total, pending, failed, processed, locked, oldestPending, oldestFailed);
+            if (shouldClose)
+                await conn.OpenAsync(ct);
+
+            try
+            {
+                await using var cmd = conn.CreateCommand();
+                cmd.CommandText = sql;
+                cmd.CommandType = CommandType.Text;
+
+                var pNow = cmd.CreateParameter();
+                pNow.ParameterName = "now";
+                pNow.Value = now;
+                cmd.Parameters.Add(pNow);
+
+                await using var reader = await cmd.ExecuteReaderAsync(ct);
+                if (!await reader.ReadAsync(ct))
+                {
+                    return new InboxStatsDto(0, 0, 0, 0, 0, null, null);
+                }
+
+                var total = reader.GetInt64(0);
+                var processed = reader.GetInt64(1);
+                var pending = reader.GetInt64(2);
+                var failed = reader.GetInt64(3);
+                var locked = reader.GetInt64(4);
+
+                DateTime? oldestPending = reader.IsDBNull(5) ? null : reader.GetFieldValue<DateTime>(5);
+                DateTime? oldestFailed = reader.IsDBNull(6) ? null : reader.GetFieldValue<DateTime>(6);
+
+                return new InboxStatsDto(
+                    Total: total,
+                    Pending: pending,
+                    Failed: failed,
+                    Processed: processed,
+                    Locked: locked,
+                    OldestPendingReceivedAtUtc: oldestPending,
+                    OldestFailedReceivedAtUtc: oldestFailed);
+            }
+            finally
+            {
+                if (shouldClose)
+                    await conn.CloseAsync();
+            }
+        }
+
+        public async Task<bool> ReplayAsync(InboxMessageId id, CancellationToken ct)
+        {
+            await using var db = await _dbFactory.CreateDbContextAsync(ct);
+
+            var msg = await db.InboxMessages.SingleOrDefaultAsync(x => x.Id == id, ct);
+
+            if (msg is null)
+                return false;
+
+            msg.ResetForReplay();
+            await db.SaveChangesAsync(ct);
+            return true;
+        }
+
+        public async Task<bool> DeleteAsync(InboxMessageId id, CancellationToken ct)
+        {
+            await using var db = await _dbFactory.CreateDbContextAsync(ct);
+
+            var affected = await db.InboxMessages
+                .Where(x => x.Id == id)
+                .ExecuteDeleteAsync(ct);
+
+            return affected > 0;
         }
 
         public async Task<bool> DeleteAsync(Guid integrationEventId, string handlerName, CancellationToken ct)
         {
+            await using var db = await _dbFactory.CreateDbContextAsync(ct);
+
             var sql = "DELETE FROM \"audit\".\"InboxMessages\" WHERE \"IntegrationEventId\" = @id AND \"HandlerName\" = @handler;";
-            var affected = await _db.Database.ExecuteSqlRawAsync(sql,
+            var affected = await db.Database.ExecuteSqlRawAsync(sql,
                 new NpgsqlParameter("id", integrationEventId),
                 new NpgsqlParameter("handler", handlerName));
 
@@ -105,6 +218,7 @@ namespace NB12.Boilerplate.Modules.Audit.Infrastructure.Repositories
 
         public async Task<int> CleanupProcessedBeforeAsync(DateTime beforeUtc, int maxRows, CancellationToken ct)
         {
+            await using var db = await _dbFactory.CreateDbContextAsync(ct);
             // Postgres-safe limited delete via ctid
             var sql = @"
                 DELETE FROM ""audit"".""InboxMessages""
@@ -117,93 +231,24 @@ namespace NB12.Boilerplate.Modules.Audit.Infrastructure.Repositories
                     LIMIT @limit
                 );";
 
-            return await _db.Database.ExecuteSqlRawAsync(sql,
+            return await db.Database.ExecuteSqlRawAsync(sql,
                 new NpgsqlParameter("before", beforeUtc),
                 new NpgsqlParameter("limit", maxRows));
         }
 
-        private static (string WhereSql, List<NpgsqlParameter> Parameters) BuildWhere(
-            Guid? integrationEventId,
-            string? handlerName,
-            InboxMessageState state,
-            DateTime? fromUtc,
-            DateTime? toUtc)
-        {
-            var parts = new List<string>();
-            var ps = new List<NpgsqlParameter>();
-
-            if (integrationEventId is not null)
-            {
-                parts.Add("\"IntegrationEventId\" = @eventId");
-                ps.Add(new NpgsqlParameter("eventId", integrationEventId.Value));
-            }
-
-            if (!string.IsNullOrWhiteSpace(handlerName))
-            {
-                parts.Add("\"HandlerName\" ILIKE @handlerName");
-                ps.Add(new NpgsqlParameter("handlerName", $"%{handlerName}%"));
-            }
-
-            if (fromUtc is not null)
-            {
-                parts.Add("\"ReceivedAtUtc\" >= @fromUtc");
-                ps.Add(new NpgsqlParameter("fromUtc", fromUtc.Value));
-            }
-
-            if (toUtc is not null)
-            {
-                parts.Add("\"ReceivedAtUtc\" <= @toUtc");
-                ps.Add(new NpgsqlParameter("toUtc", toUtc.Value));
-            }
-
-            parts.Add(state switch
-            {
-                InboxMessageState.Pending => "\"ProcessedAtUtc\" IS NULL AND \"AttemptCount\" = 0",
-                InboxMessageState.Failed => "\"ProcessedAtUtc\" IS NULL AND \"AttemptCount\" > 0",
-                InboxMessageState.Processed => "\"ProcessedAtUtc\" IS NOT NULL",
-                InboxMessageState.Locked => "\"LockedUntilUtc\" IS NOT NULL AND \"LockedUntilUtc\" > NOW() AT TIME ZONE 'UTC'",
-                _ => "TRUE"
-            });
-
-            var where = parts.Count == 0 ? "" : "WHERE " + string.Join(" AND ", parts);
-            return (where, ps);
-        }
-
-        private static (string OrderBySql, string DirSql) BuildOrderBy(Sort sort)
+        private static IQueryable<InboxMessage> ApplySort(IQueryable<InboxMessage> q, Sort sort)
         {
             var by = (sort.By ?? "receivedAtUtc").Trim().ToLowerInvariant();
-            var dir = sort.Direction == SortDirection.Asc ? "ASC" : "DESC";
+            var desc = sort.Direction == SortDirection.Desc;
 
-            var orderBy = by switch
+            return by switch
             {
-                "attemptcount" => "\"AttemptCount\"",
-                "processedatutc" => "\"ProcessedAtUtc\"",
-                "handlername" => "\"HandlerName\"",
-                "lockeduntilutc" => "\"LockedUntilUtc\"",
-                _ => "\"ReceivedAtUtc\""
+                "attemptcount" => desc ? q.OrderByDescending(x => x.AttemptCount) : q.OrderBy(x => x.AttemptCount),
+                "processedatutc" => desc ? q.OrderByDescending(x => x.ProcessedAtUtc) : q.OrderBy(x => x.ProcessedAtUtc),
+                "handlername" => desc ? q.OrderByDescending(x => x.HandlerName) : q.OrderBy(x => x.HandlerName),
+                "eventtype" => desc ? q.OrderByDescending(x => x.EventType) : q.OrderBy(x => x.EventType),
+                _ => desc ? q.OrderByDescending(x => x.ReceivedAtUtc) : q.OrderBy(x => x.ReceivedAtUtc),
             };
-
-            return (orderBy, dir);
-        }
-
-        private async Task<T> ScalarAsync<T>(string sql, CancellationToken ct)
-        {
-            sql = sql.Trim();
-            sql = sql.TrimEnd(';');
-            return await _db.Database.SqlQueryRaw<T>(sql).SingleAsync(ct);
-        }
-
-        private sealed class InboxRow
-        {
-            public Guid IntegrationEventId { get; set; }
-            public string HandlerName { get; set; } = string.Empty;
-            public DateTime ReceivedAtUtc { get; set; }
-            public DateTime? ProcessedAtUtc { get; set; }
-            public int AttemptCount { get; set; }
-            public DateTime? LastFailedAtUtc { get; set; }
-            public string? LastError { get; set; }
-            public DateTime? LockedUntilUtc { get; set; }
-            public string? LockedOwner { get; set; }
         }
     }
 }

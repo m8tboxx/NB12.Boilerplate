@@ -13,4 +13,8 @@
     <ProjectReference Include="..\NB12.Boilerplate.Modules.Audit.Domain\NB12.Boilerplate.Modules.Audit.Domain.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Services\" />
+  </ItemGroup>
+
 </Project>

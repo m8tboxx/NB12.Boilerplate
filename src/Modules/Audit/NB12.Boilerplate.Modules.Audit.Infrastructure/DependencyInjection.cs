@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using NB12.Boilerplate.BuildingBlocks.Application.Eventing.Integration;
 using NB12.Boilerplate.BuildingBlocks.Application.Interfaces;
+using NB12.Boilerplate.BuildingBlocks.Infrastructure.Persistence;
 using NB12.Boilerplate.Modules.Audit.Application.Interfaces;
 using NB12.Boilerplate.Modules.Audit.Application.Options;
 using NB12.Boilerplate.Modules.Audit.Infrastructure.Inbox;
@@ -20,25 +21,9 @@ namespace NB12.Boilerplate.Modules.Audit.Infrastructure
             if (string.IsNullOrWhiteSpace(cs))
                 throw new InvalidOperationException("Connectionstring 'AuditDb' is missing");
 
-            // IMPORTANT:
-            // AddDbContextFactory is SINGLETON by default. That collides with scoped DbContextOptions from AddDbContext.
-            // Fix: register factory as SCOPED, and register it BEFORE AddDbContext.
-            services.AddDbContextFactory<AuditDbContext>(opt =>
-            {
-                opt.UseNpgsql(cs, npgsql =>
-                {
-                    npgsql.MigrationsAssembly(typeof(AuditDbContext).Assembly.FullName);
-                });
-            }, ServiceLifetime.Scoped);
-
-            // Scoped DbContext (writes / retention / anything transactional inside a request scope)
-            services.AddDbContext<AuditDbContext>((sp, opt) =>
-            {
-                opt.UseNpgsql(cs, npgsql =>
-                {
-                    npgsql.MigrationsAssembly(typeof(AuditDbContext).Assembly.FullName);
-                });
-            });
+            services.AddNpgsqlDbContextFactoryAndScopedContext<AuditDbContext>(
+                cs,
+                configure: (_, __) => { });
 
             services.AddScoped<IAuditReadRepository, AuditReadRepository>();
             services.AddScoped<IAuditLogWriter, EfCoreAuditLogWriter>();
@@ -54,7 +39,8 @@ namespace NB12.Boilerplate.Modules.Audit.Infrastructure
                 .ValidateOnStart();
 
             services.AddSingleton<AuditRetentionStatusState>();
-            services.AddSingleton<IAuditRetentionStatusProvider>(sp => sp.GetRequiredService<AuditRetentionStatusState>());
+            services.AddScoped<IAuditRetentionConfigProvider, AuditRetentionConfigProvider>();
+            services.AddScoped<IAuditRetentionStatusProvider, AuditRetentionStatusProvider>();
             services.AddScoped<IAuditRetentionService, AuditRetentionService>();
 
             services.AddScoped<IInboxStore, EfCoreInboxStore>();

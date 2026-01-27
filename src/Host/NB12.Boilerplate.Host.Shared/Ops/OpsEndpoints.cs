@@ -1,23 +1,18 @@
 ﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.Json;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using NB12.Boilerplate.BuildingBlocks.Api.ResultHandling;
 using NB12.Boilerplate.BuildingBlocks.Application.Messaging.Abstractions;
 using NB12.Boilerplate.BuildingBlocks.Application.Querying;
 using NB12.Boilerplate.Host.Shared.Ops.Dtos;
-using NB12.Boilerplate.Modules.Audit.Application.Queries.GetAuditRetentionConfig;
-using NB12.Boilerplate.Modules.Audit.Application.Queries.GetAuditRetentionStatus;
-using NB12.Boilerplate.Modules.Audit.Application.Queries.GetInboxStats;
-using NB12.Boilerplate.Modules.Audit.Infrastructure.Persistence;
+using NB12.Boilerplate.Modules.Audit.Application.Enums;
+using NB12.Boilerplate.Modules.Audit.Application.Interfaces;
+using NB12.Boilerplate.Modules.Audit.Domain.Ids;
 using NB12.Boilerplate.Modules.Auth.Application.Enums;
-using NB12.Boilerplate.Modules.Auth.Application.Queries.GetOutboxMessages;
-using NB12.Boilerplate.Modules.Auth.Application.Queries.GetOutboxStats;
+using NB12.Boilerplate.Modules.Auth.Application.Interfaces;
 using NB12.Boilerplate.Modules.Auth.Application.Security;
-using NB12.Boilerplate.Modules.Auth.Infrastructure.Persistence;
 using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text.Json;
@@ -29,106 +24,100 @@ namespace NB12.Boilerplate.Host.Shared.Ops
         public static void MapOpsEndpoints(IEndpointRouteBuilder app)
         {
             var ops = app.MapGroup("/api/ops")
-                .WithTags("Ops");
-
-            ops.MapGet("/overview", Overview)
+                .WithTags("Ops")
                 .RequireAuthorization(AuthPermissions.Auth.OpsRead);
 
-            ops.MapGet("/outbox/stats", OutboxStats)
-                .RequireAuthorization(AuthPermissions.Auth.OpsRead);
+            ops.MapGet("/overview", Overview);
 
-            ops.MapGet("/outbox/paged", OutboxPaged)
-                .RequireAuthorization(AuthPermissions.Auth.OpsRead);
+            // OUTBOX (Auth)
+            ops.MapGet("/outbox/stats", OutboxStats);
+            ops.MapGet("/outbox/paged", OutboxPaged);
+            ops.MapPost("/outbox/{id:guid}/replay", OutboxReplay).RequireAuthorization(AuthPermissions.Auth.OpsWrite);
+            ops.MapDelete("/outbox/{id:guid}", OutboxDelete).RequireAuthorization(AuthPermissions.Auth.OpsWrite);
 
-            ops.MapGet("/inbox/stats", InboxStats)
-                .RequireAuthorization(AuthPermissions.Auth.OpsRead);
+            // INBOX (Audit)
+            ops.MapGet("/inbox/stats", InboxStats);
+            ops.MapGet("/inbox/paged", InboxPaged);
+            ops.MapPost("/inbox/{id:guid}/replay", InboxReplay).RequireAuthorization(AuthPermissions.Auth.OpsWrite);
+            ops.MapDelete("/inbox/{id:guid}", InboxDelete).RequireAuthorization(AuthPermissions.Auth.OpsWrite);
 
-            ops.MapGet("/retention/config", RetentionConfig)
-                .RequireAuthorization(AuthPermissions.Auth.OpsRead);
+            // RETENTION (Audit)
+            ops.MapGet("/retention/config", RetentionConfig);
+            ops.MapGet("/retention/status", RetentionStatus);
+            ops.MapPost("/retention/run", RetentionRunNow).RequireAuthorization(AuthPermissions.Auth.OpsWrite);
 
-            ops.MapGet("/retention/status", RetentionStatus)
-                .RequireAuthorization(AuthPermissions.Auth.OpsRead);
-
-            ops.MapGet("/health/live", Live)
-                .AllowAnonymous();
-
-            ops.MapGet("/health/ready", Ready)
-                .AllowAnonymous();
+            // Health
+            ops.MapGet("/health/live", Live).AllowAnonymous();
+            ops.MapGet("/health/ready", Ready).AllowAnonymous();
         }
 
         private static async Task<IResult> Overview(
-            ISender sender,
+            [FromServices] ISender sender,
+            [FromServices] IOutboxAdminRepository outbox,
+            [FromServices] IInboxAdminRepository inbox,
+            [FromServices] IAuditRetentionStatusProvider retentionStatus,
+            [FromServices] IAuditRetentionConfigProvider retentionConfig,
             HttpContext http,
-            IOptions<JsonOptions> jsonOptions,
+            [FromServices] IOptions<Microsoft.AspNetCore.Http.Json.JsonOptions> jsonOptions,
             CancellationToken ct)
         {
-            var outboxTask = sender.Send(new GetOutboxStatsQuery(), ct);
-            var inboxTask = sender.Send(new GetInboxStatsQuery(), ct);
-            var retentionConfigTask = sender.Send(new GetAuditRetentionConfigQuery(), ct);
-            var retentionStatusTask = sender.Send(new GetAuditRetentionStatusQuery(), ct);
+            // Parallel is safe: repositories/services use factories or no DbContext sharing.
+            var outboxStatsTask = outbox.GetStatsAsync(ct);
+            var inboxStatsTask = inbox.GetStatsAsync(ct);
+            var cfgTask = retentionConfig.GetAsync(ct);
+            var statusTask = retentionStatus.GetAsync(ct);
 
-            await Task.WhenAll(outboxTask, inboxTask, retentionConfigTask, retentionStatusTask);
+            await Task.WhenAll(outboxStatsTask, inboxStatsTask, cfgTask, statusTask);
 
-            if (!outboxTask.Result.IsSuccess)
-                return outboxTask.Result.ToHttpResult(http);
-
-            if (!inboxTask.Result.IsSuccess)
-                return inboxTask.Result.ToHttpResult(http);
-
-            if (!retentionConfigTask.Result.IsSuccess)
-                return retentionConfigTask.Result.ToHttpResult(http);
-
-            if (!retentionStatusTask.Result.IsSuccess)
-                return retentionStatusTask.Result.ToHttpResult(http);
-
-            // Meta (kann sich pro Request ändern)
             var meta = new OpsMetaDto(
                 UtcNow: DateTime.UtcNow,
                 CorrelationId: TryGetCorrelationId(http),
                 TraceId: Activity.Current?.TraceId.ToString());
 
-            // Data (soll ETag-stabil sein)
             var data = new OpsOverviewDataDto(
-                Outbox: MapOutboxStats(outboxTask.Result.Value),
-                Inbox: MapInboxStats(inboxTask.Result.Value),
+                Outbox: new OpsOutboxStatsDto(
+                    Total: outboxStatsTask.Result.Total,
+                    Pending: outboxStatsTask.Result.Pending,
+                    Failed: outboxStatsTask.Result.Failed,
+                    Processed: outboxStatsTask.Result.Processed,
+                    Locked: outboxStatsTask.Result.Locked,
+                    OldestPendingOccurredAtUtc: outboxStatsTask.Result.OldestPendingOccurredAtUtc,
+                    OldestFailedOccurredAtUtc: outboxStatsTask.Result.OldestFailedOccurredAtUtc),
+                Inbox: new OpsInboxStatsDto(
+                    Total: inboxStatsTask.Result.Total,
+                    Pending: inboxStatsTask.Result.Pending,
+                    Failed: inboxStatsTask.Result.Failed,
+                    Processed: inboxStatsTask.Result.Processed,
+                    Locked: inboxStatsTask.Result.Locked,
+                    OldestPendingReceivedAtUtc: inboxStatsTask.Result.OldestPendingReceivedAtUtc,
+                    OldestFailedReceivedAtUtc: inboxStatsTask.Result.OldestFailedReceivedAtUtc),
                 Retention: new OpsRetentionDto(
-                    Config: MapRetentionConfig(retentionConfigTask.Result.Value),
-                    Status: MapRetentionStatus(retentionStatusTask.Result.Value)));
+                    Config: new OpsRetentionConfigDto(
+                        Enabled: cfgTask.Result.Enabled,
+                        RunEveryMinutes: cfgTask.Result.RunEveryMinutes,
+                        RetainAuditLogsDays: cfgTask.Result.RetainAuditLogsDays,
+                        RetainErrorLogsDays: cfgTask.Result.RetainErrorLogsDays),
+                    Status: new OpsRetentionStatusDto(
+                        Enabled: statusTask.Result.Enabled,
+                        LastRunAtUtc: statusTask.Result.LastRunAtUtc,
+                        LastDeletedAuditLogs: statusTask.Result.LastDeletedAuditLogs,
+                        LastDeletedErrorLogs: statusTask.Result.LastDeletedErrorLogs,
+                        LastError: statusTask.Result.LastError)));
 
-            // ETag basiert NUR auf Data (nicht auf CorrelationId/TraceId)
             var etag = ComputeStrongETag(data, jsonOptions.Value.SerializerOptions);
             http.Response.Headers.ETag = etag;
 
             if (IfNoneMatchMatches(http.Request, etag))
                 return Results.StatusCode(StatusCodes.Status304NotModified);
 
-            var response = new OpsOverviewResponseDto(meta, data);
-            return Results.Ok(response);
+            return Results.Ok(new OpsOverviewResponseDto(meta, data));
         }
 
-        private static async Task<IResult> OutboxStats(ISender sender, HttpContext http, CancellationToken ct)
-        {
-            var res = await sender.Send(new GetOutboxStatsQuery(), ct);
-            return res.ToHttpResult(http, x => Results.Ok(MapOutboxStats(x)));
-        }
+        private static async Task<IResult> OutboxStats([FromServices] IOutboxAdminRepository repo, CancellationToken ct)
+            => Results.Ok(await repo.GetStatsAsync(ct));
 
-        private static async Task<IResult> InboxStats(ISender sender, HttpContext http, CancellationToken ct)
-        {
-            var res = await sender.Send(new GetInboxStatsQuery(), ct);
-            return res.ToHttpResult(http, x => Results.Ok(MapInboxStats(x)));
-        }
-
-        private static async Task<IResult> RetentionConfig(ISender sender, HttpContext http, CancellationToken ct)
-        {
-            var res = await sender.Send(new GetAuditRetentionConfigQuery(), ct);
-            return res.ToHttpResult(http, x => Results.Ok(MapRetentionConfig(x)));
-        }
-
-        private static async Task<IResult> RetentionStatus(ISender sender, HttpContext http, CancellationToken ct)
-        {
-            var res = await sender.Send(new GetAuditRetentionStatusQuery(), ct);
-            return res.ToHttpResult(http, x => Results.Ok(MapRetentionStatus(x)));
-        }
+        private static async Task<IResult> InboxStats([FromServices] IInboxAdminRepository repo, CancellationToken ct)
+            => Results.Ok(await repo.GetStatsAsync(ct));
 
         private static async Task<IResult> OutboxPaged(
             DateTime? fromUtc,
@@ -140,68 +129,61 @@ namespace NB12.Boilerplate.Host.Shared.Ops
             int pageSize,
             bool includePayload,
             bool desc,
-            ISender sender,
-            HttpContext http,
+            [FromServices] IOutboxAdminRepository repo,
             CancellationToken ct)
         {
-            var parsedState = ParseState(state);
+            var parsedState = ParseOutboxState(state);
             var pr = new PageRequest(page <= 0 ? 1 : page, pageSize <= 0 ? 50 : pageSize);
             var sort = new Sort(sortBy, desc ? SortDirection.Desc : SortDirection.Asc);
 
             if (!includePayload)
-            {
-                var res = await sender.Send(new GetOutboxMessagesPagedQuery(
-                    FromUtc: fromUtc,
-                    ToUtc: toUtc,
-                    Type: type,
-                    State: parsedState,
-                    Page: pr,
-                    Sort: sort
-                ), ct);
+                return Results.Ok(await repo.GetPagedAsync(fromUtc, toUtc, type, parsedState, pr, sort, ct));
 
-                return res.ToHttpResult(http, x =>
-                {
-                    var mapped = x.Items
-                        .Select(m => new OpsOutboxMessageDto(
-                            Id: m.Id,
-                            OccurredAtUtc: m.OccurredAtUtc,
-                            Type: m.Type,
-                            AttemptCount: m.AttemptCount,
-                            ProcessedAtUtc: m.ProcessedAtUtc,
-                            LastError: m.LastError,
-                            Content: null))
-                        .ToList();
+            return Results.Ok(await repo.GetPagedWithDetailsAsync(fromUtc, toUtc, type, parsedState, pr, sort, ct));
+        }
 
-                    var dto = OpsPagedResponse<OpsOutboxMessageDto>.From(mapped, x.Page, x.PageSize, x.Total);
-                    return Results.Ok(dto);
-                });
-            }
+        private static async Task<IResult> InboxPaged(
+            Guid? integrationEventId,
+            string? handlerName,
+            string? state,
+            DateTime? fromUtc,
+            DateTime? toUtc,
+            int page,
+            int pageSize,
+            string? sortBy,
+            bool desc,
+            [FromServices] IInboxAdminRepository repo,
+            CancellationToken ct)
+        {
+            var parsed = ParseInboxState(state);
+            var pr = new PageRequest(page <= 0 ? 1 : page, pageSize <= 0 ? 50 : pageSize);
+            var sort = new Sort(sortBy, desc ? SortDirection.Desc : SortDirection.Asc);
 
-            var resWith = await sender.Send(new GetOutboxMessagesPagedWithDetailsQuery(
-                FromUtc: fromUtc,
-                ToUtc: toUtc,
-                Type: type,
-                State: parsedState,
-                Page: pr,
-                Sort: sort
-            ), ct);
+            return Results.Ok(await repo.GetPagedAsync(integrationEventId, handlerName, parsed, fromUtc, toUtc, pr, sort, ct));
+        }
 
-            return resWith.ToHttpResult(http, x =>
-            {
-                var mapped = x.Items
-                    .Select(m => new OpsOutboxMessageDto(
-                        Id: m.Id,
-                        OccurredAtUtc: m.OccurredAtUtc,
-                        Type: m.Type,
-                        AttemptCount: m.AttemptCount,
-                        ProcessedAtUtc: m.ProcessedAtUtc,
-                        LastError: m.LastError,
-                        Content: m.Content))
-                    .ToList();
+        private static async Task<IResult> OutboxReplay(Guid id, [FromServices] IOutboxAdminRepository repo, CancellationToken ct)
+            => (await repo.ReplayAsync(id, ct)) ? Results.NoContent() : Results.NotFound();
 
-                var dto = OpsPagedResponse<OpsOutboxMessageDto>.From(mapped, x.Page, x.PageSize, x.Total);
-                return Results.Ok(dto);
-            });
+        private static async Task<IResult> OutboxDelete(Guid id, [FromServices] IOutboxAdminRepository repo, CancellationToken ct)
+            => (await repo.DeleteAsync(id, ct)) ? Results.NoContent() : Results.NotFound();
+
+        private static async Task<IResult> InboxReplay(InboxMessageId id, [FromServices] IInboxAdminRepository repo, CancellationToken ct)
+            => (await repo.ReplayAsync(id, ct)) ? Results.NoContent() : Results.NotFound();
+
+        private static async Task<IResult> InboxDelete(InboxMessageId id, [FromServices] IInboxAdminRepository repo, CancellationToken ct)
+            => (await repo.DeleteAsync(id, ct)) ? Results.NoContent() : Results.NotFound();
+
+        private static async Task<IResult> RetentionConfig([FromServices] IAuditRetentionConfigProvider provider, CancellationToken ct)
+            => Results.Ok(await provider.GetAsync(ct));
+
+        private static async Task<IResult> RetentionStatus([FromServices] IAuditRetentionStatusProvider provider, CancellationToken ct)
+            => Results.Ok(await provider.GetAsync(ct));
+
+        private static async Task<IResult> RetentionRunNow([FromServices] IAuditRetentionService svc, CancellationToken ct)
+        {
+            await svc.RunOnceAsync(ct);
+            return Results.Accepted();
         }
 
         private static IResult Live()
@@ -212,80 +194,16 @@ namespace NB12.Boilerplate.Host.Shared.Ops
 
         private static async Task<IResult> Ready(HttpContext http, CancellationToken ct)
         {
-            var sp = http.RequestServices;
-
-            var checks = new List<OpsHealthCheckDto>
-            {
-                await CheckDb<AuthDbContext>(sp, "AuthDb", ct),
-                await CheckDb<AuditDbContext>(sp, "AuditDb", ct)
-            };
-
-            var ok = checks.All(c => c.Status == "ok");
-
-            var response = new OpsHealthResponseDto(
-                Status: ok ? "ready" : "degraded",
+            // If your ready-check uses DbContexts, keep it lightweight or do it in dedicated endpoints.
+            // For now: ready == live (you can extend later).
+            await Task.CompletedTask;
+            return Results.Ok(new OpsHealthResponseDto(
+                Status: "ready",
                 UtcNow: DateTime.UtcNow,
-                Checks: checks);
-
-            return Results.Ok(response);
+                Checks: Array.Empty<OpsHealthCheckDto>()));
         }
 
-        private static async Task<OpsHealthCheckDto> CheckDb<TDbContext>(IServiceProvider sp, string name, CancellationToken ct)
-            where TDbContext : DbContext
-        {
-            try
-            {
-                var db = sp.GetService<TDbContext>();
-                if (db is null)
-                    return new OpsHealthCheckDto(name, "missing", "DbContext not registered in this host.");
-
-                var canConnect = await db.Database.CanConnectAsync(ct);
-                return canConnect
-                    ? new OpsHealthCheckDto(name, "ok", null)
-                    : new OpsHealthCheckDto(name, "fail", "Database connectivity check failed.");
-            }
-            catch (Exception ex)
-            {
-                return new OpsHealthCheckDto(name, "fail", ex.Message);
-            }
-        }
-
-        private static OpsOutboxStatsDto MapOutboxStats(NB12.Boilerplate.Modules.Auth.Application.Responses.OutboxStatsDto s)
-            => new(
-                Total: s.Total,
-                Pending: s.Pending,
-                Failed: s.Failed,
-                Processed: s.Processed,
-                Locked: s.Locked,
-                OldestPendingOccurredAtUtc: s.OldestPendingOccurredAtUtc,
-                OldestFailedOccurredAtUtc: s.OldestFailedOccurredAtUtc);
-
-        private static OpsInboxStatsDto MapInboxStats(NB12.Boilerplate.Modules.Audit.Application.Responses.InboxStatsDto s)
-            => new(
-                Total: s.Total,
-                Pending: s.Pending,
-                Failed: s.Failed,
-                Processed: s.Processed,
-                Locked: s.Locked,
-                OldestPendingReceivedAtUtc: s.OldestPendingReceivedAtUtc,
-                OldestFailedReceivedAtUtc: s.OldestFailedReceivedAtUtc);
-
-        private static OpsRetentionConfigDto MapRetentionConfig(NB12.Boilerplate.Modules.Audit.Application.Responses.AuditRetentionConfigDto c)
-            => new(
-                Enabled: c.Enabled,
-                RunEveryMinutes: c.RunEveryMinutes,
-                RetainAuditLogsDays: c.RetainAuditLogsDays,
-                RetainErrorLogsDays: c.RetainErrorLogsDays);
-
-        private static OpsRetentionStatusDto MapRetentionStatus(NB12.Boilerplate.Modules.Audit.Application.Responses.AuditRetentionStatusDto s)
-            => new(
-                Enabled: s.Enabled,
-                LastRunAtUtc: s.LastRunAtUtc,
-                LastDeletedAuditLogs: s.LastDeletedAuditLogs,
-                LastDeletedErrorLogs: s.LastDeletedErrorLogs,
-                LastError: s.LastError);
-
-        private static OutboxMessageState ParseState(string? state)
+        private static OutboxMessageState ParseOutboxState(string? state)
         {
             if (string.IsNullOrWhiteSpace(state))
                 return OutboxMessageState.All;
@@ -297,6 +215,20 @@ namespace NB12.Boilerplate.Host.Shared.Ops
                 "processed" => OutboxMessageState.Processed,
                 "deadlettered" => OutboxMessageState.DeadLettered,
                 _ => OutboxMessageState.All
+            };
+        }
+
+        private static InboxMessageState ParseInboxState(string? state)
+        {
+            if (string.IsNullOrWhiteSpace(state))
+                return NB12.Boilerplate.Modules.Audit.Application.Enums.InboxMessageState.All;
+
+            return state.Trim().ToLowerInvariant() switch
+            {
+                "pending" => InboxMessageState.Pending,
+                "failed" => InboxMessageState.Failed,
+                "processed" => InboxMessageState.Processed,
+                _ => InboxMessageState.All
             };
         }
 
@@ -315,8 +247,6 @@ namespace NB12.Boilerplate.Host.Shared.Ops
         {
             var bytes = JsonSerializer.SerializeToUtf8Bytes(data, options);
             var hash = SHA256.HashData(bytes);
-
-            // Strong ETag requires quotes
             return "\"" + Convert.ToHexString(hash).ToLowerInvariant() + "\"";
         }
 
@@ -329,15 +259,12 @@ namespace NB12.Boilerplate.Host.Shared.Ops
             if (string.IsNullOrWhiteSpace(raw))
                 return false;
 
-            // Can be "*" or list: W/"abc", "def"
             if (raw.Trim() == "*")
                 return true;
 
             var parts = raw.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-
             foreach (var p in parts)
             {
-                // accept weak match too: W/"..."
                 var token = p.StartsWith("W/", StringComparison.OrdinalIgnoreCase)
                     ? p.Substring(2).Trim()
                     : p.Trim();

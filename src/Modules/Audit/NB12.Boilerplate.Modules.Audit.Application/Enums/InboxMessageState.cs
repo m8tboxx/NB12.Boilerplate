@@ -6,6 +6,6 @@
         Pending = 1,
         Failed = 2,
         Processed = 3,
-        Locked = 4
+        DeadLettered = 4
     }
 }

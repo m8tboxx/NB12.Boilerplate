@@ -61,7 +61,7 @@ namespace NB12.Boilerplate.Modules.Audit.Infrastructure.Services
                     .Where(x => x.OccurredAtUtc < errorCutoff)
                     .ExecuteDeleteAsync(ct);
 
-                _state.SetSuccess(utcNow, deletedAudit, deletedErrors);
+                _state.RecordSuccess(utcNow, deletedAudit, deletedErrors);
 
                 return new AuditRetentionCleanupResultDto(
                     RanAtUtc: utcNow,
@@ -70,9 +70,14 @@ namespace NB12.Boilerplate.Modules.Audit.Infrastructure.Services
             }
             catch(Exception ex)
             {
-                _state.SetFailure(utcNow, ex.ToString());
+                _state.RecordError(utcNow, ex.ToString());
                 throw;
             }
+        }
+
+        public Task RunOnceAsync(CancellationToken ct)
+        {
+            throw new NotImplementedException();
         }
     }
 }

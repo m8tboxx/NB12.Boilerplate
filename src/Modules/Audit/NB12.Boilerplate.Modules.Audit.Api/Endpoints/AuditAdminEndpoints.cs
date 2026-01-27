@@ -134,7 +134,7 @@ namespace NB12.Boilerplate.Modules.Audit.Api.Endpoints
                 "pending" => InboxMessageState.Pending,
                 "failed" => InboxMessageState.Failed,
                 "processed" => InboxMessageState.Processed,
-                "locked" => InboxMessageState.Locked,
+                "deadLetterd" => InboxMessageState.DeadLettered,
                 _ => InboxMessageState.All
             };
         }

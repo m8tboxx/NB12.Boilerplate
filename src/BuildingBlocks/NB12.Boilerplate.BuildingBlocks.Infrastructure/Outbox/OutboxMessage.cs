@@ -30,8 +30,7 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Outbox
             DeadLetterReason = deadLetterReason;
         }
 
-        // Backwards-compatible constructor (NO locking args)
-        // -> used by Interceptors that enqueue new messages
+        // Backwards-compatible constructor (no locking/dead-letter args)
         public OutboxMessage(
             OutboxMessageId id,
             DateTime occurredAtUtc,
@@ -52,8 +51,7 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Outbox
                 lockedBy: null,
                 deadLetteredAtUtc: null,
                 deadLetterReason: null)
-        {
-        }
+        {}
 
         public void MarkProcessed(DateTime processedAtUtc)
         {
@@ -69,10 +67,7 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Outbox
         public OutboxMessageId Id { get; private set; }
         public DateTime OccurredAtUtc { get; private set; }
 
-        // Type discriminator for deserialization (e.g. FullName)
         public string Type { get; private set; } = null!;
-
-        // JSON payload
         public string Content { get; private set; } = null!;
 
         public DateTime? ProcessedAtUtc { get; private set; }
@@ -82,7 +77,6 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Outbox
         public DateTimeOffset? LockedUntilUtc { get; private set; }
         public string? LockedBy { get; private set; }
 
-        // Dead-letter
         public DateTime? DeadLetteredAtUtc { get; private set; }
         public string? DeadLetterReason { get; private set; }
     }

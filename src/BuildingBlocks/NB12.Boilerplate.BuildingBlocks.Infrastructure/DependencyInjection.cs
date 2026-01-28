@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using NB12.Boilerplate.BuildingBlocks.Application.Eventing.Integration;
 using NB12.Boilerplate.BuildingBlocks.Application.Interfaces;
 using NB12.Boilerplate.BuildingBlocks.Application.Security;
+using NB12.Boilerplate.BuildingBlocks.Domain.Serialization;
 using NB12.Boilerplate.BuildingBlocks.Infrastructure.Auditing;
 using NB12.Boilerplate.BuildingBlocks.Infrastructure.Auth;
 using NB12.Boilerplate.BuildingBlocks.Infrastructure.Eventing;
@@ -32,10 +33,9 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure
             services.AddScoped<IAuditContextAccessor, DefaultAuditContextAccessor>();
             services.AddScoped<AuditSaveChangesInterceptor>();
 
-            services.AddSingleton(new JsonSerializerOptions(JsonSerializerDefaults.Web));
+            services.AddSingleton(_ => AppJsonSerializerOptions.Create());
             services.AddScoped<CompositeDomainEventToIntegrationEventMapper>();
             services.AddScoped<DomainEventsOutboxInterceptor>();
-            //services.AddEventBus(assemblies);
 
             return services;
         }

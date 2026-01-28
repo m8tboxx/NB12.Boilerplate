@@ -52,13 +52,13 @@ namespace NB12.Boilerplate.Host.Shared.Ops
         }
 
         private static async Task<IResult> Overview(
+            HttpContext http,
             [FromServices] ISender sender,
             [FromServices] IOutboxAdminRepository outbox,
             [FromServices] IInboxAdminRepository inbox,
             [FromServices] IAuditRetentionStatusProvider retentionStatus,
             [FromServices] IAuditRetentionConfigProvider retentionConfig,
-            HttpContext http,
-            [FromServices] IOptions<Microsoft.AspNetCore.Http.Json.JsonOptions> jsonOptions,
+            [FromServices] JsonSerializerOptions json,
             CancellationToken ct)
         {
             // Parallel is safe: repositories/services use factories or no DbContext sharing.
@@ -69,6 +69,11 @@ namespace NB12.Boilerplate.Host.Shared.Ops
 
             await Task.WhenAll(outboxStatsTask, inboxStatsTask, cfgTask, statusTask);
 
+            var outboxStats = await outboxStatsTask;
+            var inboxStats = await inboxStatsTask;
+            var cfg = await cfgTask;
+            var status = await statusTask;
+
             var meta = new OpsMetaDto(
                 UtcNow: DateTime.UtcNow,
                 CorrelationId: TryGetCorrelationId(http),
@@ -76,35 +81,35 @@ namespace NB12.Boilerplate.Host.Shared.Ops
 
             var data = new OpsOverviewDataDto(
                 Outbox: new OpsOutboxStatsDto(
-                    Total: outboxStatsTask.Result.Total,
-                    Pending: outboxStatsTask.Result.Pending,
-                    Failed: outboxStatsTask.Result.Failed,
-                    Processed: outboxStatsTask.Result.Processed,
-                    Locked: outboxStatsTask.Result.Locked,
-                    OldestPendingOccurredAtUtc: outboxStatsTask.Result.OldestPendingOccurredAtUtc,
-                    OldestFailedOccurredAtUtc: outboxStatsTask.Result.OldestFailedOccurredAtUtc),
+                    Total: outboxStats.Total,
+                    Pending: outboxStats.Pending,
+                    Failed: outboxStats.Failed,
+                    Processed: outboxStats.Processed,
+                    Locked: outboxStats.Locked,
+                    OldestPendingOccurredAtUtc: outboxStats.OldestPendingOccurredAtUtc,
+                    OldestFailedOccurredAtUtc: outboxStats.OldestFailedOccurredAtUtc),
                 Inbox: new OpsInboxStatsDto(
-                    Total: inboxStatsTask.Result.Total,
-                    Pending: inboxStatsTask.Result.Pending,
-                    Failed: inboxStatsTask.Result.Failed,
-                    Processed: inboxStatsTask.Result.Processed,
-                    Locked: inboxStatsTask.Result.Locked,
-                    OldestPendingReceivedAtUtc: inboxStatsTask.Result.OldestPendingReceivedAtUtc,
-                    OldestFailedReceivedAtUtc: inboxStatsTask.Result.OldestFailedReceivedAtUtc),
+                    Total: inboxStats.Total,
+                    Pending: inboxStats.Pending,
+                    Failed: inboxStats.Failed,
+                    Processed: inboxStats.Processed,
+                    Locked: inboxStats.Locked,
+                    OldestPendingReceivedAtUtc: inboxStats.OldestPendingReceivedAtUtc,
+                    OldestFailedReceivedAtUtc: inboxStats.OldestFailedReceivedAtUtc),
                 Retention: new OpsRetentionDto(
                     Config: new OpsRetentionConfigDto(
-                        Enabled: cfgTask.Result.Enabled,
-                        RunEveryMinutes: cfgTask.Result.RunEveryMinutes,
-                        RetainAuditLogsDays: cfgTask.Result.RetainAuditLogsDays,
-                        RetainErrorLogsDays: cfgTask.Result.RetainErrorLogsDays),
+                        Enabled: cfg.Enabled,
+                        RunEveryMinutes: cfg.RunEveryMinutes,
+                        RetainAuditLogsDays: cfg.RetainAuditLogsDays,
+                        RetainErrorLogsDays: cfg.RetainErrorLogsDays),
                     Status: new OpsRetentionStatusDto(
-                        Enabled: statusTask.Result.Enabled,
-                        LastRunAtUtc: statusTask.Result.LastRunAtUtc,
-                        LastDeletedAuditLogs: statusTask.Result.LastDeletedAuditLogs,
-                        LastDeletedErrorLogs: statusTask.Result.LastDeletedErrorLogs,
-                        LastError: statusTask.Result.LastError)));
+                        Enabled: status.Enabled,
+                        LastRunAtUtc: status.LastRunAtUtc,
+                        LastDeletedAuditLogs: status.LastDeletedAuditLogs,
+                        LastDeletedErrorLogs: status.LastDeletedErrorLogs,
+                        LastError: status.LastError)));
 
-            var etag = ComputeStrongETag(data, jsonOptions.Value.SerializerOptions);
+            var etag = ComputeStrongETag(data, json);
             http.Response.Headers.ETag = etag;
 
             if (IfNoneMatchMatches(http.Request, etag))

@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.Extensions.Logging;
 using NB12.Boilerplate.BuildingBlocks.Application.Eventing.Domain;
 using NB12.Boilerplate.BuildingBlocks.Application.Eventing.Integration;
 using NB12.Boilerplate.BuildingBlocks.Domain.Events;
@@ -16,10 +17,12 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Eventing
     public sealed class DomainEventsOutboxInterceptor(
         IDomainEventDispatcher dispatcher,
         CompositeDomainEventToIntegrationEventMapper mapper,
-        JsonSerializerOptions jsonOptions) : SaveChangesInterceptor
+        JsonSerializerOptions jsonOptions,
+        ILogger<DomainEventsOutboxInterceptor> logger) : SaveChangesInterceptor
     {
         private readonly List<IDomainEvent> _capturedDomainEvents = [];
         private readonly List<IHasDomainEvents> _capturedEntities = [];
+
 
         public override InterceptionResult<int> SavingChanges(
             DbContextEventData eventData,
@@ -30,6 +33,7 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Eventing
 
             return result;
         }
+
 
         public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
             DbContextEventData eventData,
@@ -42,9 +46,84 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Eventing
             return ValueTask.FromResult(result);
         }
 
+ 
+        public override int SavedChanges(SaveChangesCompletedEventData eventData, int result)
+        {
+            var batch = DrainCapturedEvents();
+
+            if (batch is not null)
+                _ = DispatchSafeAsync(batch, CancellationToken.None);
+
+            return base.SavedChanges(eventData, result);
+        }
+
+
+        public override async ValueTask<int> SavedChangesAsync(
+            SaveChangesCompletedEventData eventData,
+            int result,
+            CancellationToken cancellationToken = default)
+        {
+            var batch = DrainCapturedEvents();
+
+            if (batch is not null)
+                _ = DispatchSafeAsync(batch, cancellationToken);
+
+            return await base.SavedChangesAsync(eventData, result, cancellationToken);
+        }
+
+
+        public override void SaveChangesFailed(DbContextErrorEventData eventData)
+        {
+            _capturedDomainEvents.Clear();
+            _capturedEntities.Clear();
+            base.SaveChangesFailed(eventData);
+        }
+
+
+        public override Task SaveChangesFailedAsync(
+            DbContextErrorEventData eventData,
+            CancellationToken cancellationToken = default)
+        {
+            _capturedDomainEvents.Clear();
+            _capturedEntities.Clear();
+            return base.SaveChangesFailedAsync(eventData, cancellationToken);
+        }
+
+
+        private List<IDomainEvent>? DrainCapturedEvents()
+        {
+            if (_capturedDomainEvents.Count == 0)
+                return null;
+
+            var toDispatch = _capturedDomainEvents.ToList();
+            _capturedDomainEvents.Clear();
+
+            foreach (var entity in _capturedEntities)
+                entity.ClearDomainEvents();
+
+            _capturedEntities.Clear();
+            return toDispatch;
+        }
+
+
+        private async Task DispatchSafeAsync(List<IDomainEvent> events, CancellationToken ct)
+        {
+            try
+            {
+                await dispatcher.Dispatch(events, ct);
+            }
+            catch (Exception ex)
+            {
+                // IMPORTANT: After committing, this must not break any requests.
+                logger.LogError(ex,
+                    "Post-commit domain event dispatch failed. Events={EventCount}",
+                    events.Count);
+            }
+        }
+
+
         private void CaptureAndWriteOutbox(DbContext db)
         {
-            // Reset state for this SaveChanges call (defensive).
             _capturedDomainEvents.Clear();
             _capturedEntities.Clear();
 
@@ -67,17 +146,17 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Eventing
 
             var outboxMessages = new List<OutboxMessage>();
 
-            foreach (var de in domainEvents)
+            foreach (var domainEvent in domainEvents)
             {
-                var integrationEvents = mapper.MapAll(de);
+                var integrationEvents = mapper.MapAll(domainEvent);
 
-                foreach (var ie in integrationEvents)
+                foreach (var integrationEvent in integrationEvents)
                 {
                     outboxMessages.Add(new OutboxMessage(
-                        new OutboxMessageId(ie.Id),
-                        ie.OccurredAtUtc,
-                        ie.GetType().FullName ?? ie.GetType().Name,
-                        JsonSerializer.Serialize(ie, ie.GetType(), jsonOptions),
+                        new OutboxMessageId(integrationEvent.Id),
+                        integrationEvent.OccurredAtUtc,
+                        integrationEvent.GetType().FullName ?? integrationEvent.GetType().Name,
+                        JsonSerializer.Serialize(integrationEvent, integrationEvent.GetType(), jsonOptions),
                         attemptCount: 0,
                         processedAtUtc: null,
                         lastError: null,
@@ -90,60 +169,6 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Eventing
 
             if (outboxMessages.Count > 0)
                 db.Set<OutboxMessage>().AddRange(outboxMessages);
-        }
-
-        public override int SavedChanges(SaveChangesCompletedEventData eventData, int result)
-        {
-            AfterCommitDispatch(CancellationToken.None);
-            return base.SavedChanges(eventData, result);
-        }
-
-        public override async ValueTask<int> SavedChangesAsync(
-            SaveChangesCompletedEventData eventData,
-            int result,
-            CancellationToken cancellationToken = default)
-        {
-            await AfterCommitDispatchAsync(cancellationToken);
-            return await base.SavedChangesAsync(eventData, result, cancellationToken);
-        }
-
-        public override void SaveChangesFailed(DbContextErrorEventData eventData)
-        {
-            _capturedDomainEvents.Clear();
-            _capturedEntities.Clear();
-            base.SaveChangesFailed(eventData);
-        }
-
-        private void AfterCommitDispatch(CancellationToken ct)
-        {
-            if (_capturedDomainEvents.Count == 0)
-                return;
-
-            var toDispatch = _capturedDomainEvents.ToList();
-            _capturedDomainEvents.Clear();
-
-            foreach (var entity in _capturedEntities)
-                entity.ClearDomainEvents();
-
-            _capturedEntities.Clear();
-
-            dispatcher.Dispatch(toDispatch, ct).GetAwaiter().GetResult();
-        }
-
-        private async Task AfterCommitDispatchAsync(CancellationToken ct)
-        {
-            if (_capturedDomainEvents.Count == 0)
-                return;
-
-            var toDispatch = _capturedDomainEvents.ToList();
-            _capturedDomainEvents.Clear();
-
-            foreach (var entity in _capturedEntities)
-                entity.ClearDomainEvents();
-
-            _capturedEntities.Clear();
-
-            await dispatcher.Dispatch(toDispatch, ct);
         }
     }
 }

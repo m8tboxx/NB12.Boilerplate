@@ -1,5 +1,4 @@
 ﻿using NB12.Boilerplate.BuildingBlocks.Domain.Interfaces;
-using System.Reflection;
 
 namespace NB12.Boilerplate.BuildingBlocks.Domain.Common
 {
@@ -15,7 +14,7 @@ namespace NB12.Boilerplate.BuildingBlocks.Domain.Common
         protected BaseAuditableEntity() { } // EF
 
         protected BaseAuditableEntity(TId id, DateTime createdUtc, string? createdBy)
-        : base(id)
+            : base(id)
         {
             CreatedAtUtc = createdUtc;
             CreatedBy = createdBy;
@@ -38,20 +37,11 @@ namespace NB12.Boilerplate.BuildingBlocks.Domain.Common
 
         public string GetAuditEntityId()
         {
-            // StronglyTypedId Pattern: public TValue Value { get; }
             var id = Id;
-            if (id is null) return "<null>";
+            if (id is null) 
+                return "<null>";
 
-            var valueProp = id.GetType().GetProperty("Value", BindingFlags.Public | BindingFlags.Instance);
-            if (valueProp is not null)
-            {
-                var value = valueProp.GetValue(id);
-                if (value is not null)
-                    return value.ToString()!;
-            }
-
-            // Fallback
-            return id.ToString()!;
+            return id.ToString() ?? string.Empty;
         }
     }
 }

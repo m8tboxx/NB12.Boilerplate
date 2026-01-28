@@ -16,6 +16,8 @@
             string lockOwner,
             DateTime utcNow,
             DateTime lockedUntilUtc,
+            string eventType,
+            string payloadJson,
             CancellationToken ct);
 
         /// <summary>

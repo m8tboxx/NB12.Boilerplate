@@ -29,6 +29,7 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Outbox
                     SELECT ""Id""
                     FROM {table}
                     WHERE ""ProcessedAtUtc"" IS NULL
+                      AND ""DeadLetteredAtUtc"" IS NULL
                       AND (""LockedUntilUtc"" IS NULL OR ""LockedUntilUtc"" < {{0}})
                     ORDER BY ""OccurredAtUtc""
                     LIMIT {{1}}
@@ -46,7 +47,11 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Outbox
                 .ToListAsync(ct);
         }
 
-        public async Task MarkProcessed(OutboxMessageId id, string lockOwner, DateTime utcNow, CancellationToken ct)
+        public async Task MarkProcessed(
+            OutboxMessageId id, 
+            string lockOwner, 
+            DateTime utcNow, 
+            CancellationToken ct)
         {
             var table = GetQualifiedTableName(db);
 
@@ -57,12 +62,22 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Outbox
                     ""LockedBy"" = NULL
                 WHERE ""Id"" = {{1}}
                   AND ""LockedBy"" = {{2}}
-                  AND ""ProcessedAtUtc"" IS NULL;";
+                  AND ""ProcessedAtUtc"" IS NULL
+                  AND ""DeadLetteredAtUtc"" IS NULL;";
 
-            await db.Database.ExecuteSqlRawAsync(sql, new object[] { utcNow, id.Value, lockOwner }, ct);
+            await db.Database.ExecuteSqlRawAsync(
+                sql, 
+                [utcNow, id.Value, lockOwner], 
+                ct);
         }
 
-        public async Task MarkFailed(OutboxMessageId id, string lockOwner, DateTime utcNow, Exception ex, OutboxFailurePlan plan, CancellationToken ct)
+        public async Task MarkFailed(
+            OutboxMessageId id, 
+            string lockOwner, 
+            DateTime utcNow, 
+            Exception ex, 
+            OutboxFailurePlan plan, 
+            CancellationToken ct)
         {
             var table = GetQualifiedTableName(db);
 
@@ -83,7 +98,10 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Outbox
                       AND ""ProcessedAtUtc"" IS NULL
                       AND ""DeadLetteredAtUtc"" IS NULL;";
 
-                await db.Database.ExecuteSqlRawAsync(sql, new object[] { ex.ToString(), reason, id.Value, lockOwner }, ct);
+                await db.Database.ExecuteSqlRawAsync(
+                    sql, 
+                    [ex.ToString(), reason, id.Value, lockOwner], 
+                    ct);
 
                 return;
             }
@@ -106,7 +124,10 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Outbox
                   AND ""ProcessedAtUtc"" IS NULL
                   AND ""DeadLetteredAtUtc"" IS NULL;";
 
-            await db.Database.ExecuteSqlRawAsync(retrySql, new object[] { ex.ToString(), nextVisibleAt, id.Value, lockOwner }, ct);
+            await db.Database.ExecuteSqlRawAsync(
+                retrySql, 
+                [ex.ToString(), nextVisibleAt, id.Value, lockOwner], 
+                ct);
         }
 
 

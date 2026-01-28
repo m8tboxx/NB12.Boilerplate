@@ -12,6 +12,8 @@ namespace NB12.Boilerplate.Modules.Audit.Infrastructure.Inbox
             string lockOwner,
             DateTime utcNow,
             DateTime lockedUntilUtc,
+            string eventType,
+            string payloadJson,
             CancellationToken ct)
         {
             if (integrationEventId == Guid.Empty)
@@ -23,15 +25,26 @@ namespace NB12.Boilerplate.Modules.Audit.Infrastructure.Inbox
             if (string.IsNullOrWhiteSpace(lockOwner))
                 throw new ArgumentException("Lock owner must be provided.", nameof(lockOwner));
 
+            if (string.IsNullOrWhiteSpace(eventType))
+                throw new ArgumentException("Event type must be provided.", nameof(eventType));
+
+            if (string.IsNullOrWhiteSpace(payloadJson))
+                throw new ArgumentException("PayloadJson must be provided.", nameof(payloadJson));
+
             var table = GetQualifiedTableName(db);
 
             // Ensure row exists
             var insertSql = $@"
                 INSERT INTO {table} (""Id"", ""IntegrationEventId"", ""HandlerName"", ""ReceivedAtUtc"", ""AttemptCount"", ""EventType"", ""PayloadJson"")
                 VALUES ({{0}}, {{1}}, {{2}}, {{3}}, 0, {{4}}, CAST({{5}} AS jsonb))
-                ON CONFLICT (""IntegrationEventId"", ""HandlerName"") DO NOTHING;";
+                ON CONFLICT (""IntegrationEventId"", ""HandlerName"") DO UPDATE
+                    SET ""EventType"" = EXCLUDED.""EventType"",
+                        ""PayloadJson"" = EXCLUDED.""PayloadJson"";";
 
-            await db.Database.ExecuteSqlRawAsync(insertSql, new object[] { Guid.NewGuid(), integrationEventId, handlerName, utcNow, string.Empty, "{ }" }, ct);
+            await db.Database.ExecuteSqlRawAsync(
+                insertSql, 
+                new object[] { Guid.NewGuid(), integrationEventId, handlerName, utcNow, eventType, payloadJson }, 
+                ct);
 
             // Claim if not processed and not locked (or lock expired)
             var updateSql = $@"

@@ -23,10 +23,13 @@
 
         public static Result Success() 
             => new(true);
+
         public static Result Fail(Error error) 
             => new(false, new List<Error> { error });
+
         public static Result Fail(IEnumerable<Error> errors)
             => new(false, [.. errors]);
+
         public static Result Combine(params Result[] results)
         {
             var errors = results.Where(r => r.IsFailure).SelectMany(r => r.Errors).ToList();
@@ -55,7 +58,9 @@
             : throw new InvalidOperationException("Cannot access the value of a failed result.");
 
         public static Result<T> Success(T value) => new(true, value, null);
+
         public static new Result<T> Fail(Error error) => new(false, default, new List<Error> { error });
+
         public static new Result<T> Fail(IEnumerable<Error> errors) => new(false, default, [.. errors]);
 
         /// <summary>

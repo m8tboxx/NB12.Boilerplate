@@ -10,7 +10,7 @@ using NB12.Boilerplate.Modules.Auth.Infrastructure.Persistence;
 
 namespace NB12.Boilerplate.Host.Api.IntegrationTests
 {
-    public sealed class CustomWebApplicationFactory : WebApplicationFactory<Program>
+    public class CustomWebApplicationFactory : WebApplicationFactory<Program>
     {
         private PostgresTestDatabases? _dbs;
 
@@ -97,6 +97,8 @@ namespace NB12.Boilerplate.Host.Api.IntegrationTests
                     };
                 });
             });
+
+            builder.ConfigureServices(services => ConfigureTestServices(services));
         }
 
         protected override void Dispose(bool disposing)
@@ -112,5 +114,7 @@ namespace NB12.Boilerplate.Host.Api.IntegrationTests
                 _dbs = null;
             }
         }
+
+        protected virtual void ConfigureTestServices(IServiceCollection services) { }
     }
 }

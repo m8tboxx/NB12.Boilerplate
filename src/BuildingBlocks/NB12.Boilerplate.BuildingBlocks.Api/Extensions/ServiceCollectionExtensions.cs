@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using NB12.Boilerplate.BuildingBlocks.Api.Middleware;
 using NB12.Boilerplate.BuildingBlocks.Api.Middleware.ETag;
 using NB12.Boilerplate.BuildingBlocks.Api.ProblemHandling;
+using NB12.Boilerplate.BuildingBlocks.Domain.Serialization;
 
 namespace NB12.Boilerplate.BuildingBlocks.Api.Extensions
 {
@@ -11,12 +12,14 @@ namespace NB12.Boilerplate.BuildingBlocks.Api.Extensions
     {
         public static IServiceCollection AddApiBuildingBlocks(this IServiceCollection services)
         {
-            // Minimal API binding errors -> Exception, damit unser ExceptionHandler greift
+            services.ConfigureHttpJsonOptions(o => AppJsonSerializerOptions.Configure(o.SerializerOptions));
+            
+            // Minimal API binding errors -> Exception, so that our exception handler can be triggered
             services.Configure<RouteHandlerOptions>(o => o.ThrowOnBadRequest = true);
 
             services.AddCorrelationId();
-
             services.AddProblemDetails();
+
             services.AddExceptionHandler<ApiExceptionHandler>();
 
             services.AddSingleton<IAuthorizationMiddlewareResultHandler, ProblemDetailsAuthorizationMiddlewareResultHandler>();

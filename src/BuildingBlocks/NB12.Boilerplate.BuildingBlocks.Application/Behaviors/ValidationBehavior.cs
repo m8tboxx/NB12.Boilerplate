@@ -58,7 +58,7 @@ namespace NB12.Boilerplate.BuildingBlocks.Application.Behaviors
                 return (TResponse)failMethod.Invoke(null, new object[] { errors })!;
             }
 
-            // Wenn du Non-Result Responses zulässt: dann hier throw, damit ExceptionHandler greift
+            // If you allow non-result responses: then use `throw` here so that the exception handler catches.
             throw new ValidationException(failures);
         }
     }

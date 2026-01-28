@@ -10,8 +10,10 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.EventBus
             string lockOwner,
             DateTime utcNow,
             DateTime lockedUntilUtc,
+            string eventType,
+            string payloadJson,
             CancellationToken ct)
-            => Task.FromResult(true);
+                => Task.FromResult(true);
 
         public Task MarkProcessedAsync(
             Guid integrationEventId,
@@ -19,7 +21,7 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.EventBus
             string lockOwner,
             DateTime processedAtUtc,
             CancellationToken ct)
-            => Task.CompletedTask;
+                => Task.CompletedTask;
 
         public Task MarkFailedAsync(
             Guid integrationEventId,
@@ -28,6 +30,6 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.EventBus
             DateTime failedAtUtc,
             string error,
             CancellationToken ct)
-            => Task.CompletedTask;
+                => Task.CompletedTask;
     }
 }

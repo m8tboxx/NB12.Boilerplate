@@ -107,76 +107,19 @@ namespace NB12.Boilerplate.Modules.Audit.Infrastructure.Repositories
         {
             await using var db = await _dbFactory.CreateDbContextAsync(ct);
 
-            var now = DateTime.UtcNow;
+            var stats = await db.GetMessageStoreStatsAsync<InboxMessage>(
+                nowUtc: DateTime.UtcNow,
+                timestampPropertyName: nameof(InboxMessage.ReceivedAtUtc),
+                ct: ct);
 
-            var (table, storeId, et) = EfPostgresSql.Table<InboxMessage>(db);
-
-            var receivedAt = EfPostgresSql.Column(et, storeId, nameof(InboxMessage.ReceivedAtUtc));
-            var processedAt = EfPostgresSql.Column(et, storeId, nameof(InboxMessage.ProcessedAtUtc));
-            var attemptCount = EfPostgresSql.Column(et, storeId, nameof(InboxMessage.AttemptCount));
-
-            var hasLockedUntil = EfPostgresSql.HasProperty(et, "LockedUntilUtc");
-            var lockedExpr = hasLockedUntil
-                ? $"COUNT(*) FILTER (WHERE {processedAt} IS NULL AND {EfPostgresSql.Column(et, storeId, "LockedUntilUtc")} IS NOT NULL AND {EfPostgresSql.Column(et, storeId, "LockedUntilUtc")} > @now)"
-                : "0";
-
-            var sql = $@"
-                SELECT
-                    COUNT(*)::bigint                                              AS total,
-                    COUNT(*) FILTER (WHERE {processedAt} IS NOT NULL)::bigint      AS processed,
-                    COUNT(*) FILTER (WHERE {processedAt} IS NULL AND {attemptCount} = 0)::bigint AS pending,
-                    COUNT(*) FILTER (WHERE {processedAt} IS NULL AND {attemptCount} > 0)::bigint AS failed,
-                    ({lockedExpr})::bigint                                         AS locked,
-                    MIN({receivedAt}) FILTER (WHERE {processedAt} IS NULL)         AS oldest_pending,
-                    MIN({receivedAt}) FILTER (WHERE {processedAt} IS NULL AND {attemptCount} > 0) AS oldest_failed
-                FROM {table}";
-
-            var conn = db.Database.GetDbConnection();
-            var shouldClose = conn.State != ConnectionState.Open;
-
-            if (shouldClose)
-                await conn.OpenAsync(ct);
-
-            try
-            {
-                await using var cmd = conn.CreateCommand();
-                cmd.CommandText = sql;
-                cmd.CommandType = CommandType.Text;
-
-                var pNow = cmd.CreateParameter();
-                pNow.ParameterName = "now";
-                pNow.Value = now;
-                cmd.Parameters.Add(pNow);
-
-                await using var reader = await cmd.ExecuteReaderAsync(ct);
-                if (!await reader.ReadAsync(ct))
-                {
-                    return new InboxStatsDto(0, 0, 0, 0, 0, null, null);
-                }
-
-                var total = reader.GetInt64(0);
-                var processed = reader.GetInt64(1);
-                var pending = reader.GetInt64(2);
-                var failed = reader.GetInt64(3);
-                var locked = reader.GetInt64(4);
-
-                DateTime? oldestPending = reader.IsDBNull(5) ? null : reader.GetFieldValue<DateTime>(5);
-                DateTime? oldestFailed = reader.IsDBNull(6) ? null : reader.GetFieldValue<DateTime>(6);
-
-                return new InboxStatsDto(
-                    Total: total,
-                    Pending: pending,
-                    Failed: failed,
-                    Processed: processed,
-                    Locked: locked,
-                    OldestPendingReceivedAtUtc: oldestPending,
-                    OldestFailedReceivedAtUtc: oldestFailed);
-            }
-            finally
-            {
-                if (shouldClose)
-                    await conn.CloseAsync();
-            }
+            return new InboxStatsDto(
+                Total: stats.Total,
+                Pending: stats.Pending,
+                Failed: stats.Failed,
+                Processed: stats.Processed,
+                Locked: stats.Locked,
+                OldestPendingReceivedAtUtc: stats.OldestPendingUtc,
+                OldestFailedReceivedAtUtc: stats.OldestFailedUtc);
         }
 
         public async Task<bool> ReplayAsync(InboxMessageId id, CancellationToken ct)

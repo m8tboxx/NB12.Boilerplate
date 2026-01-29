@@ -4,13 +4,11 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
-using NB12.Boilerplate.BuildingBlocks.Application.Interfaces;
 using NB12.Boilerplate.BuildingBlocks.Application.Security;
 using NB12.Boilerplate.BuildingBlocks.Infrastructure.Auditing;
 using NB12.Boilerplate.BuildingBlocks.Infrastructure.Eventing;
 using NB12.Boilerplate.BuildingBlocks.Infrastructure.Outbox;
 using NB12.Boilerplate.BuildingBlocks.Infrastructure.Persistence;
-using NB12.Boilerplate.Modules.Audit.Contracts.Auditing;
 using NB12.Boilerplate.Modules.Auth.Application.Abstractions;
 using NB12.Boilerplate.Modules.Auth.Application.Interfaces;
 using NB12.Boilerplate.Modules.Auth.Application.Options;
@@ -66,29 +64,6 @@ namespace NB12.Boilerplate.Modules.Auth.Infrastructure
                     options.AddInterceptors(sp.GetRequiredService<AuditSaveChangesInterceptor>());
                     options.AddInterceptors(sp.GetRequiredService<DomainEventsOutboxInterceptor>());
                 });
-
-            //// IMPORTANT:
-            //// AddDbContextFactory is SINGLETON by default. That collides with scoped DbContextOptions from AddDbContext.
-            //// Fix: register factory as SCOPED, and register it BEFORE AddDbContext so Identity/scoped context stays intact.
-            //services.AddDbContextFactory<AuthDbContext>((sp, options) =>
-            //{
-            //    options.UseNpgsql(connectionString, npgsql =>
-            //    {
-            //        npgsql.MigrationsAssembly(typeof(AuthDbContext).Assembly.FullName);
-            //    });
-            //}, ServiceLifetime.Scoped);
-
-            //// Scoped DbContext for Identity / transactional commands (with interceptors)
-            //services.AddDbContext<AuthDbContext>((sp, options) =>
-            //{
-            //    options.UseNpgsql(connectionString, npgsql =>
-            //    {
-            //        npgsql.MigrationsAssembly(typeof(AuthDbContext).Assembly.FullName);
-            //    });
-
-            //    options.AddInterceptors(sp.GetRequiredService<AuditSaveChangesInterceptor>());
-            //    options.AddInterceptors(sp.GetRequiredService<DomainEventsOutboxInterceptor>());
-            //});
 
             services.AddIdentityCore<ApplicationUser>(options =>
             {
@@ -152,8 +127,6 @@ namespace NB12.Boilerplate.Modules.Auth.Infrastructure
 
             services.AddScoped<IModuleOutboxStore>(sp =>
                 new EfCoreOutboxStore<AuthDbContext>(sp.GetRequiredService<AuthDbContext>(), module: "Auth"));
-
-            services.AddScoped<IAuditIntegrationEventFactory, AuditIntegrationEventFactory>();
 
             return services;
         }

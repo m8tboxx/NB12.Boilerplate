@@ -21,7 +21,7 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure
             services.AddHttpContextAccessor();
 
             // Current user accessor (reads from HttpContext)
-            services.AddScoped<ICurrentUser, CurrentUser>();
+            services.AddSingleton<ICurrentUser, CurrentUser>();
 
             // Permission-based authorization (policy is built on-demand)
             services.AddSingleton<IPermissionCatalog, PermissionCatalog>();
@@ -30,12 +30,12 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure
 
             // Audit core
             services.AddSingleton<IErrorAuditWriter, NoOpErrorAuditWriter>(); // wird vom Audit-Modul überschrieben
-            services.AddScoped<IAuditContextAccessor, DefaultAuditContextAccessor>();
-            services.AddScoped<AuditSaveChangesInterceptor>();
+            services.AddSingleton<IAuditContextAccessor, DefaultAuditContextAccessor>();
+            services.AddSingleton<AuditSaveChangesInterceptor>();
 
             services.AddSingleton(_ => AppJsonSerializerOptions.Create());
-            services.AddScoped<CompositeDomainEventToIntegrationEventMapper>();
-            services.AddScoped<DomainEventsOutboxInterceptor>();
+            services.AddSingleton<CompositeDomainEventToIntegrationEventMapper>();
+            services.AddSingleton<DomainEventsOutboxInterceptor>();
 
             return services;
         }

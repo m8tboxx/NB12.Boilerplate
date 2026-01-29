@@ -13,8 +13,7 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Persistence
         public static IServiceCollection AddNpgsqlDbContextFactoryAndScopedContext<TContext>(
             this IServiceCollection services,
             string connectionString,
-            Action<IServiceProvider, DbContextOptionsBuilder> configure,
-            ServiceLifetime factoryLifetime = ServiceLifetime.Scoped)
+            Action<IServiceProvider, DbContextOptionsBuilder> configure)
             where TContext : DbContext
         {
             services.AddDbContextFactory<TContext>((sp, opt) =>
@@ -26,7 +25,7 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Persistence
                 });
 
                 configure(sp, opt);
-            }, factoryLifetime);
+            }, ServiceLifetime.Singleton);
 
             // This makes TContext available as a normal scoped DbContext (e.g. for Identity/UoW),
             // but it is created from the factory (one instance per scope).

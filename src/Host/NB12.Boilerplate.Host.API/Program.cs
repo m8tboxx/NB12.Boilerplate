@@ -22,6 +22,12 @@ var builder = WebApplication.CreateBuilder(args);
 
 const string CorsPolicyName = "Frontend";
 
+builder.Host.UseDefaultServiceProvider(o =>
+{
+    o.ValidateScopes = true;
+    o.ValidateOnBuild = true;
+});
+
 // Serilog
 builder.Host.UseSerilog((ctx, services, cfg) =>
     cfg.ReadFrom.Configuration(ctx.Configuration)

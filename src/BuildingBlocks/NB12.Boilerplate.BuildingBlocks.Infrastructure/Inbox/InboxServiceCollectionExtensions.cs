@@ -41,7 +41,7 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Inbox
             // Keyed inbox store for this module
             //services.AddKeyedSingleton<IInboxStore, EfCoreInboxStore<TDbContext>>(moduleKey);
 
-            services.AddKeyedSingleton<IInboxStore>(moduleKey, (sp, _) =>
+            services.AddKeyedScoped<IInboxStore>(moduleKey, (sp, _) =>
                 new EfCoreInboxStore<TDbContext>(sp.GetRequiredService<IDbContextFactory<TDbContext>>()));
 
             // Keyed stats state for this module + expose as module provider via IEnumerable later if needed

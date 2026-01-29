@@ -6,6 +6,7 @@ using NB12.Boilerplate.BuildingBlocks.Infrastructure.Inbox;
 using NB12.Boilerplate.BuildingBlocks.Infrastructure.Persistence;
 using NB12.Boilerplate.Modules.Audit.Application.Interfaces;
 using NB12.Boilerplate.Modules.Audit.Application.Options;
+using NB12.Boilerplate.Modules.Audit.Contracts.Auditing;
 using NB12.Boilerplate.Modules.Audit.Infrastructure.Persistence;
 using NB12.Boilerplate.Modules.Audit.Infrastructure.Repositories;
 using NB12.Boilerplate.Modules.Audit.Infrastructure.Services;
@@ -16,12 +17,12 @@ namespace NB12.Boilerplate.Modules.Audit.Infrastructure
     {
         public static IServiceCollection AddAuditInfrastructure(this IServiceCollection services, IConfiguration config)
         {
-            var cs = config.GetConnectionString("AuditDb");
-            if (string.IsNullOrWhiteSpace(cs))
+            var connetctionString = config.GetConnectionString("AuditDb");
+            if (string.IsNullOrWhiteSpace(connetctionString))
                 throw new InvalidOperationException("Connectionstring 'AuditDb' is missing");
 
             services.AddNpgsqlDbContextFactoryAndScopedContext<AuditDbContext>(
-                cs,
+                connetctionString,
                 configure: (_, __) => { });
 
             services.AddScoped<IAuditReadRepository, AuditReadRepository>();
@@ -49,6 +50,8 @@ namespace NB12.Boilerplate.Modules.Audit.Infrastructure
             {
                 services.AddHostedService<AuditRetentionHostedService>();
             }
+
+            services.AddSingleton<IAuditIntegrationEventFactory, AuditIntegrationEventFactory>();
 
             return services;
         }

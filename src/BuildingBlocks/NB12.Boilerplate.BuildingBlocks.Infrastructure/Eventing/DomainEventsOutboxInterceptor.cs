@@ -6,6 +6,8 @@ using NB12.Boilerplate.BuildingBlocks.Application.Eventing.Integration;
 using NB12.Boilerplate.BuildingBlocks.Domain.Events;
 using NB12.Boilerplate.BuildingBlocks.Infrastructure.Ids;
 using NB12.Boilerplate.BuildingBlocks.Infrastructure.Outbox;
+using System.Linq.Expressions;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 
 namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Eventing
@@ -20,8 +22,13 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Eventing
         JsonSerializerOptions jsonOptions,
         ILogger<DomainEventsOutboxInterceptor> logger) : SaveChangesInterceptor
     {
+        private readonly ConditionalWeakTable<DbContext, CaptureState> _state = new();
         private readonly List<IDomainEvent> _capturedDomainEvents = [];
         private readonly List<IHasDomainEvents> _capturedEntities = [];
+
+        private sealed record CaptureState(
+            List<IDomainEvent> DomainEvents,
+            List<IHasDomainEvents> Entities);
 
 
         public override InterceptionResult<int> SavingChanges(
@@ -47,12 +54,17 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Eventing
         }
 
  
-        public override int SavedChanges(SaveChangesCompletedEventData eventData, int result)
+        public override int SavedChanges(
+            SaveChangesCompletedEventData eventData, 
+            int result)
         {
-            var batch = DrainCapturedEvents();
+            if (eventData.Context is { } db)
+            {
+                var batch = DrainCapturedEvents(db);
 
-            if (batch is not null)
-                _ = DispatchSafeAsync(batch, CancellationToken.None);
+                if (batch is not null)
+                    _ = DispatchSafeAsync(batch, CancellationToken.None);
+            }
 
             return base.SavedChanges(eventData, result);
         }
@@ -63,19 +75,23 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Eventing
             int result,
             CancellationToken cancellationToken = default)
         {
-            var batch = DrainCapturedEvents();
+            if (eventData.Context is { } db)
+            {
+                var batch = DrainCapturedEvents(db);
 
-            if (batch is not null)
-                _ = DispatchSafeAsync(batch, cancellationToken);
-
+                if (batch is not null)
+                    _ = DispatchSafeAsync(batch, cancellationToken);
+            }
+            
             return await base.SavedChangesAsync(eventData, result, cancellationToken);
         }
 
 
         public override void SaveChangesFailed(DbContextErrorEventData eventData)
         {
-            _capturedDomainEvents.Clear();
-            _capturedEntities.Clear();
+            if (eventData.Context is { } db)
+                _state.Remove(db);
+
             base.SaveChangesFailed(eventData);
         }
 
@@ -84,25 +100,29 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Eventing
             DbContextErrorEventData eventData,
             CancellationToken cancellationToken = default)
         {
-            _capturedDomainEvents.Clear();
-            _capturedEntities.Clear();
+            if (eventData.Context is { } db)
+            {
+                _state.Remove(db);
+            }
+            
             return base.SaveChangesFailedAsync(eventData, cancellationToken);
         }
 
 
-        private List<IDomainEvent>? DrainCapturedEvents()
+        private List<IDomainEvent>? DrainCapturedEvents(DbContext db)
         {
-            if (_capturedDomainEvents.Count == 0)
+            if (!_state.TryGetValue(db, out var captured))
                 return null;
 
-            var toDispatch = _capturedDomainEvents.ToList();
-            _capturedDomainEvents.Clear();
+            _state.Remove(db);
 
-            foreach (var entity in _capturedEntities)
+            if (captured.DomainEvents.Count == 0)
+                return null;
+
+            foreach (var entity in captured.Entities)
                 entity.ClearDomainEvents();
 
-            _capturedEntities.Clear();
-            return toDispatch;
+            return captured.DomainEvents;
         }
 
 
@@ -124,8 +144,7 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Eventing
 
         private void CaptureAndWriteOutbox(DbContext db)
         {
-            _capturedDomainEvents.Clear();
-            _capturedEntities.Clear();
+            _state.Remove(db);
 
             var entities = db.ChangeTracker
                 .Entries<IHasDomainEvents>()
@@ -136,21 +155,14 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Eventing
             if (entities.Count == 0)
                 return;
 
-            _capturedEntities.AddRange(entities);
-
-            var domainEvents = entities
-                .SelectMany(e => e.DomainEvents)
-                .ToList();
-
-            _capturedDomainEvents.AddRange(domainEvents);
+            var domainEvents = entities.SelectMany(e => e.DomainEvents).ToList();
+            _state.Add(db, new CaptureState(domainEvents, entities));
 
             var outboxMessages = new List<OutboxMessage>();
 
             foreach (var domainEvent in domainEvents)
             {
-                var integrationEvents = mapper.MapAll(domainEvent);
-
-                foreach (var integrationEvent in integrationEvents)
+                foreach (var integrationEvent in mapper.MapAll(domainEvent))
                 {
                     outboxMessages.Add(new OutboxMessage(
                         new OutboxMessageId(integrationEvent.Id),

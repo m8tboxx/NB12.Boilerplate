@@ -1,4 +1,5 @@
-﻿using NB12.Boilerplate.BuildingBlocks.Application.Messaging.Abstractions;
+﻿using NB12.Boilerplate.BuildingBlocks.Application.Enums;
+using NB12.Boilerplate.BuildingBlocks.Application.Messaging.Abstractions;
 using NB12.Boilerplate.BuildingBlocks.Domain.Common;
 using NB12.Boilerplate.Modules.Auth.Application.Interfaces;
 
@@ -13,10 +14,18 @@ namespace NB12.Boilerplate.Modules.Auth.Application.Commands.DeleteOutboxMessage
 
         public async Task<Result> Handle(DeleteOutboxMessageCommand cmd, CancellationToken ct)
         {
-            var ok = await _repo.DeleteAsync(cmd.Id, ct);
-            return ok
-                ? Result.Success()
-                : Result.Fail(Error.NotFound("auth.outbox.not_found", $"Outbox message '{cmd.Id}' not found."));
+            var result = await _repo.DeleteAsync(cmd.Id, ct);
+
+            return result switch
+            {
+                OutboxAdminWriteResult.Ok => Result.Success(),
+                OutboxAdminWriteResult.Locked => Result.Fail(Error.Conflict(
+                    "auth.outbox.locked",
+                    $"Outbox message '{cmd.Id}' is currently locked and cannot be deleted.")),
+                _ => Result.Fail(Error.NotFound(
+                    "auth.outbox.not_found",
+                    $"Outbox message '{cmd.Id}' not found."))
+            };
         }
     }
 }

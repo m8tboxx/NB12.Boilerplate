@@ -14,7 +14,9 @@ namespace NB12.Boilerplate.Host.Api.IntegrationTests
         public async Task Inbox_store_enforces_lock_retry_and_processed_semantics()
         {
             using var scope = _factory.Services.CreateScope();
-            var inbox = scope.ServiceProvider.GetRequiredService<IInboxStore>();
+
+            // Audit ist garantiert im Test-Host vorhanden -> Key muss exakt so registriert sein
+            var inbox = scope.ServiceProvider.GetRequiredKeyedService<IInboxStore>("Audit");
 
             var id = Guid.NewGuid();
             const string handler = "Test.Handler";

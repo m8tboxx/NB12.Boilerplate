@@ -17,27 +17,43 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Persistence
             var processedAt = EfPostgresSql.Column(et, storeId, "ProcessedAtUtc");
             var attemptCount = EfPostgresSql.Column(et, storeId, "AttemptCount");
 
+            // Optional: Dead-letter support
+            var hasDeadLetteredAt = EfPostgresSql.HasProperty(et, "DeadLetteredAtUtc");
+            var deadLetteredAt = hasDeadLetteredAt
+                ? EfPostgresSql.Column(et, storeId, "DeadLetteredAtUtc")
+                : "NULL";
+
             var hasLockedUntil = EfPostgresSql.HasProperty(et, "LockedUntilUtc");
+            var lockedUntil = hasLockedUntil
+                ? EfPostgresSql.Column(et, storeId, "LockedUntilUtc")
+                : "NULL";
+
+            // Pending = unprocessed, attempt=0, not dead-lettered
+            var pendingFilter = $"{processedAt} IS NULL AND {attemptCount} = 0 AND ({deadLetteredAt} IS NULL)";
+
+            // Failed = unprocessed, attempt>0 OR dead-lettered
+            var failedFilter = $"{processedAt} IS NULL AND ({attemptCount} > 0 OR ({deadLetteredAt} IS NOT NULL))";
+
             var lockedExpr = hasLockedUntil
-                ? $"COUNT(*) FILTER (WHERE {processedAt} IS NULL AND {EfPostgresSql.Column(et, storeId, "LockedUntilUtc")} IS NOT NULL AND {EfPostgresSql.Column(et, storeId, "LockedUntilUtc")} > @now)"
+                ? $"COUNT(*) FILTER (WHERE {processedAt} IS NULL AND ({deadLetteredAt} IS NULL) AND {lockedUntil} IS NOT NULL AND {lockedUntil} > @now)"
                 : "0";
 
             var sql = $@"
                 SELECT
-                    COUNT(*)::bigint                                                        AS total,
-                    COUNT(*) FILTER (WHERE {processedAt} IS NOT NULL)::bigint                AS processed,
-                    COUNT(*) FILTER (WHERE {processedAt} IS NULL AND {attemptCount} = 0)::bigint AS pending,
-                    COUNT(*) FILTER (WHERE {processedAt} IS NULL AND {attemptCount} > 0)::bigint AS failed,
-                    ({lockedExpr})::bigint                                                   AS locked,
-                    MIN({ts}) FILTER (WHERE {processedAt} IS NULL)                            AS oldest_pending,
-                    MIN({ts}) FILTER (WHERE {processedAt} IS NULL AND {attemptCount} > 0)     AS oldest_failed
-                FROM {table}";
+                    COUNT(*)::bigint AS total,
+                    COUNT(*) FILTER (WHERE {processedAt} IS NOT NULL)::bigint AS processed,
+                    COUNT(*) FILTER (WHERE {pendingFilter})::bigint AS pending,
+                    COUNT(*) FILTER (WHERE {failedFilter})::bigint AS failed,
+                    ({lockedExpr})::bigint AS locked,
+                    MIN({ts}) FILTER (WHERE {pendingFilter}) AS oldest_pending,
+                    MIN({ts}) FILTER (WHERE {failedFilter}) AS oldest_failed
+                FROM {table};";
 
             var conn = db.Database.GetDbConnection();
             var shouldClose = conn.State != ConnectionState.Open;
 
             if (shouldClose)
-                await conn.OpenAsync(ct);
+                await conn.OpenAsync(ct).ConfigureAwait(false);
 
             try
             {
@@ -50,8 +66,9 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Persistence
                 pNow.Value = nowUtc;
                 cmd.Parameters.Add(pNow);
 
-                await using var reader = await cmd.ExecuteReaderAsync(ct);
-                if (!await reader.ReadAsync(ct))
+                await using var reader = await cmd.ExecuteReaderAsync(ct).ConfigureAwait(false);
+
+                if (!await reader.ReadAsync(ct).ConfigureAwait(false))
                     return new MessageStoreStats(0, 0, 0, 0, 0, null, null);
 
                 var total = reader.GetInt64(0);
@@ -75,7 +92,7 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Persistence
             finally
             {
                 if (shouldClose)
-                    await conn.CloseAsync();
+                    await conn.CloseAsync().ConfigureAwait(false);
             }
         }
     }

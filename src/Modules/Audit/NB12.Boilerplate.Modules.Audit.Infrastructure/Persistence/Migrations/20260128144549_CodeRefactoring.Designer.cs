@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NB12.Boilerplate.Modules.Audit.Infrastructure.Persistence;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace NB12.Boilerplate.Modules.Audit.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AuditDbContext))]
-    partial class AuditDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260128144549_CodeRefactoring")]
+    partial class CodeRefactoring
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -22,75 +25,6 @@ namespace NB12.Boilerplate.Modules.Audit.Infrastructure.Persistence.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
-
-            modelBuilder.Entity("NB12.Boilerplate.BuildingBlocks.Infrastructure.Inbox.InboxMessage", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
-
-                    b.Property<int>("AttemptCount")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("DeadLetterReason")
-                        .HasColumnType("text");
-
-                    b.Property<DateTime?>("DeadLetteredAtUtc")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("EventType")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("HandlerName")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<Guid>("IntegrationEventId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("LastError")
-                        .HasColumnType("text");
-
-                    b.Property<DateTime?>("LastFailedAtUtc")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("LockedOwner")
-                        .HasColumnType("text");
-
-                    b.Property<DateTime?>("LockedUntilUtc")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("PayloadJson")
-                        .IsRequired()
-                        .HasColumnType("jsonb");
-
-                    b.Property<DateTime?>("ProcessedAtUtc")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime>("ReceivedAtUtc")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("AttemptCount");
-
-                    b.HasIndex("DeadLetteredAtUtc");
-
-                    b.HasIndex("HandlerName");
-
-                    b.HasIndex("IntegrationEventId");
-
-                    b.HasIndex("LockedUntilUtc");
-
-                    b.HasIndex("ProcessedAtUtc");
-
-                    b.HasIndex("ReceivedAtUtc");
-
-                    b.HasIndex("IntegrationEventId", "HandlerName")
-                        .IsUnique();
-
-                    b.ToTable("InboxMessages", "audit");
-                });
 
             modelBuilder.Entity("NB12.Boilerplate.Modules.Audit.Domain.Entities.AuditLog", b =>
                 {
@@ -194,6 +128,75 @@ namespace NB12.Boilerplate.Modules.Audit.Infrastructure.Persistence.Migrations
                     b.HasIndex("TraceId");
 
                     b.ToTable("ErrorLogs", "audit");
+                });
+
+            modelBuilder.Entity("NB12.Boilerplate.Modules.Audit.Infrastructure.Inbox.InboxMessage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("DeadLetterReason")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("DeadLetteredAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("HandlerName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("IntegrationEventId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("LastError")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("LastFailedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("LockedOwner")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("LockedUntilUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("PayloadJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<DateTime?>("ProcessedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("ReceivedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AttemptCount");
+
+                    b.HasIndex("HandlerName");
+
+                    b.HasIndex("IntegrationEventId");
+
+                    b.HasIndex("LastFailedAtUtc");
+
+                    b.HasIndex("LockedUntilUtc");
+
+                    b.HasIndex("ProcessedAtUtc");
+
+                    b.HasIndex("ReceivedAtUtc");
+
+                    b.HasIndex("IntegrationEventId", "HandlerName")
+                        .IsUnique();
+
+                    b.ToTable("InboxMessages", "audit");
                 });
 #pragma warning restore 612, 618
         }

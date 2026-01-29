@@ -1,4 +1,5 @@
-﻿using NB12.Boilerplate.BuildingBlocks.Application.Messaging.Abstractions;
+﻿using NB12.Boilerplate.BuildingBlocks.Application.Interfaces;
+using NB12.Boilerplate.BuildingBlocks.Application.Messaging.Abstractions;
 using NB12.Boilerplate.BuildingBlocks.Domain.Common;
 using NB12.Boilerplate.Modules.Auth.Application.Abstractions;
 using NB12.Boilerplate.Modules.Auth.Application.Interfaces;
@@ -12,17 +13,20 @@ namespace NB12.Boilerplate.Modules.Auth.Application.Commands.CreateUser
         private readonly IIdentityService _identity;
         private readonly IUserProfileRepository _profiles;
         private readonly IUnitOfWork _uow;
+        private readonly ICurrentUser _currentUser;
 
-        public CreateUserCommandHandler(IIdentityService identity, IUserProfileRepository profiles, IUnitOfWork uow)
+        public CreateUserCommandHandler(IIdentityService identity, IUserProfileRepository profiles, IUnitOfWork uow, ICurrentUser currentUser)
         {
             _identity = identity;
             _profiles = profiles;
             _uow = uow;
+            _currentUser = currentUser;
         }
 
         public async Task<Result<string>> Handle(CreateUserCommand request, CancellationToken ct)
         {
             var create = await _identity.CreateUserAsync(request.Email, request.Password, ct);
+
             if (create.IsFailure)
                 return Result<string>.Fail(create.Errors);
 
@@ -36,7 +40,7 @@ namespace NB12.Boilerplate.Modules.Auth.Application.Commands.CreateUser
                 locale: request.Locale,
                 dateOfBirth: request.DateOfBirth,
                 utcNow: DateTime.UtcNow,
-                actor: "admin");
+                actor: _currentUser.UserId);
 
             profile.AddDomainEvent(new UserProfileCreatedDomainEvent(profile.Id, profile.IdentityUserId, profile.Email));
 

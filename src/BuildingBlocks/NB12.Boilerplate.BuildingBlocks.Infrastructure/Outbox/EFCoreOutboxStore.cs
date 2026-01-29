@@ -100,7 +100,7 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Outbox
 
                 await db.Database.ExecuteSqlRawAsync(
                     sql, 
-                    [ex.ToString(), reason, id.Value, lockOwner], 
+                    [ex.ToString(), utcNow, reason, id.Value, lockOwner], 
                     ct);
 
                 return;

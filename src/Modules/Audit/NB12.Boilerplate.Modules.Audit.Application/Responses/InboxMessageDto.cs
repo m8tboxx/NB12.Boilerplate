@@ -1,4 +1,4 @@
-﻿using NB12.Boilerplate.Modules.Audit.Domain.Ids;
+﻿using NB12.Boilerplate.BuildingBlocks.Application.Ids;
 
 namespace NB12.Boilerplate.Modules.Audit.Application.Responses
 {
@@ -11,6 +11,7 @@ namespace NB12.Boilerplate.Modules.Audit.Application.Responses
         DateTime? ProcessedAtUtc,
         int AttemptCount,
         string? LastError,
+        DateTime? LastFailedAtUtc,
         DateTime? LockedUntilUtc,
         string? LockedOwner,
         DateTime? DeadLetteredAtUtc,

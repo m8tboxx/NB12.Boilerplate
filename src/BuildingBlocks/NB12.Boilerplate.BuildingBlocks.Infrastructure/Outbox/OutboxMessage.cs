@@ -12,7 +12,7 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Outbox
             int attemptCount,
             DateTime? processedAtUtc,
             string? lastError,
-             DateTime? lockedUntilUtc,
+            DateTimeOffset? lockedUntilUtc,
             string? lockedBy,
             DateTime? deadLetteredAtUtc,
             string? deadLetterReason)

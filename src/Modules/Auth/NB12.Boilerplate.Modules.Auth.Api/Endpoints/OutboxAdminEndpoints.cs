@@ -8,6 +8,7 @@ using NB12.Boilerplate.Modules.Auth.Application.Commands.DeleteOutboxMessage;
 using NB12.Boilerplate.Modules.Auth.Application.Commands.ReplayOutboxMessage;
 using NB12.Boilerplate.Modules.Auth.Application.Enums;
 using NB12.Boilerplate.Modules.Auth.Application.Queries.GetOutboxMessages;
+using NB12.Boilerplate.Modules.Auth.Application.Queries.GetOutboxStats;
 using NB12.Boilerplate.Modules.Auth.Application.Security;
 
 namespace NB12.Boilerplate.Modules.Auth.Api.Endpoints
@@ -21,6 +22,9 @@ namespace NB12.Boilerplate.Modules.Auth.Api.Endpoints
             outbox.MapGet("/paged", GetPaged)
                 .RequireAuthorization(AuthPermissions.Auth.OutboxRead);
 
+            outbox.MapGet("/stats", GetStats)
+               .RequireAuthorization(AuthPermissions.Auth.OutboxRead);
+
             outbox.MapGet("/{id:guid}", GetById)
                 .RequireAuthorization(AuthPermissions.Auth.OutboxRead);
 
@@ -32,6 +36,7 @@ namespace NB12.Boilerplate.Modules.Auth.Api.Endpoints
 
             return group;
         }
+
 
         private static async Task<IResult> GetPaged(
             DateTime? fromUtc,
@@ -60,6 +65,17 @@ namespace NB12.Boilerplate.Modules.Auth.Api.Endpoints
             return res.ToHttpResult(http, x => Results.Ok(x));
         }
 
+
+        private static async Task<IResult> GetStats(
+            ISender sender,
+            HttpContext http,
+            CancellationToken ct)
+        {
+            var res = await sender.Send(new GetOutboxStatsQuery(), ct);
+            return res.ToHttpResult(http, x => Results.Ok(x));
+        }
+
+
         private static async Task<IResult> GetById(
             Guid id,
             ISender sender,
@@ -69,6 +85,7 @@ namespace NB12.Boilerplate.Modules.Auth.Api.Endpoints
             var res = await sender.Send(new GetOutboxMessageQuery(id), ct);
             return res.ToHttpResult(http, x => Results.Ok(x));
         }
+
 
         private static async Task<IResult> Replay(
             Guid id,
@@ -80,6 +97,7 @@ namespace NB12.Boilerplate.Modules.Auth.Api.Endpoints
             return res.ToHttpResult(http);
         }
 
+
         private static async Task<IResult> Delete(
             Guid id,
             ISender sender,
@@ -89,6 +107,7 @@ namespace NB12.Boilerplate.Modules.Auth.Api.Endpoints
             var res = await sender.Send(new DeleteOutboxMessageCommand(id), ct);
             return res.ToHttpResult(http);
         }
+
 
         private static OutboxMessageState ParseState(string? state)
         {
@@ -100,7 +119,7 @@ namespace NB12.Boilerplate.Modules.Auth.Api.Endpoints
                 "pending" => OutboxMessageState.Pending,
                 "failed" => OutboxMessageState.Failed,
                 "processed" => OutboxMessageState.Processed,
-                "deadlettered" => OutboxMessageState.DeadLettered,
+                "deadlettered" or "deadletterd" or "dead-lettered" => OutboxMessageState.DeadLettered,
                 _ => OutboxMessageState.All
             };
         }

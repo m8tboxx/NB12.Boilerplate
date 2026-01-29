@@ -3,13 +3,13 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
+using NB12.Boilerplate.BuildingBlocks.Application.Enums;
+using NB12.Boilerplate.BuildingBlocks.Application.Ids;
 using NB12.Boilerplate.BuildingBlocks.Application.Messaging.Abstractions;
 using NB12.Boilerplate.BuildingBlocks.Application.Querying;
 using NB12.Boilerplate.Host.Shared.Ops.Dtos;
 using NB12.Boilerplate.Modules.Audit.Application.Enums;
 using NB12.Boilerplate.Modules.Audit.Application.Interfaces;
-using NB12.Boilerplate.Modules.Audit.Domain.Ids;
 using NB12.Boilerplate.Modules.Auth.Application.Enums;
 using NB12.Boilerplate.Modules.Auth.Application.Interfaces;
 using NB12.Boilerplate.Modules.Auth.Application.Security;
@@ -168,16 +168,56 @@ namespace NB12.Boilerplate.Host.Shared.Ops
         }
 
         private static async Task<IResult> OutboxReplay(Guid id, [FromServices] IOutboxAdminRepository repo, CancellationToken ct)
-            => (await repo.ReplayAsync(id, ct)) ? Results.NoContent() : Results.NotFound();
+        {
+            var result = await repo.ReplayAsync(id, ct);
+
+            return result switch
+            {
+                OutboxAdminWriteResult.Ok => Results.NoContent(),
+                OutboxAdminWriteResult.NotFound => Results.NotFound(),
+                OutboxAdminWriteResult.Locked => Results.BadRequest(),
+                _ => Results.Problem($"Unexpected result OutboxReplay: {result}")
+            };
+        }
 
         private static async Task<IResult> OutboxDelete(Guid id, [FromServices] IOutboxAdminRepository repo, CancellationToken ct)
-            => (await repo.DeleteAsync(id, ct)) ? Results.NoContent() : Results.NotFound();
+        {
+            var result = await repo.DeleteAsync(id, ct);
+
+            return result switch
+            {
+                OutboxAdminWriteResult.Ok => Results.NoContent(),
+                OutboxAdminWriteResult.NotFound => Results.NotFound(),
+                OutboxAdminWriteResult.Locked => Results.BadRequest(),
+                _ => Results.Problem($"Unexpected result OutboxDelete: {result}")
+            };
+        }
 
         private static async Task<IResult> InboxReplay(InboxMessageId id, [FromServices] IInboxAdminRepository repo, CancellationToken ct)
-            => (await repo.ReplayAsync(id, ct)) ? Results.NoContent() : Results.NotFound();
+        {
+            var result = await repo.ReplayAsync(id, ct);
+
+            return result switch
+            {
+                InboxAdminWriteResult.Ok => Results.NoContent(),
+                InboxAdminWriteResult.NotFound => Results.NotFound(),
+                InboxAdminWriteResult.Locked => Results.BadRequest(),
+                _ => Results.Problem($"Unexpected result InboxReplay: {result}")
+            };
+        }
 
         private static async Task<IResult> InboxDelete(InboxMessageId id, [FromServices] IInboxAdminRepository repo, CancellationToken ct)
-            => (await repo.DeleteAsync(id, ct)) ? Results.NoContent() : Results.NotFound();
+        {
+            var result = await repo.DeleteAsync(id, ct);
+
+            return result switch
+            {
+                InboxAdminWriteResult.Ok => Results.NoContent(),
+                InboxAdminWriteResult.NotFound => Results.NotFound(),
+                InboxAdminWriteResult.Locked => Results.BadRequest(),
+                _ => Results.Problem($"Unexpected result InboxDelete: {result}")
+            };
+        }
 
         private static async Task<IResult> RetentionConfig([FromServices] IAuditRetentionConfigProvider provider, CancellationToken ct)
             => Results.Ok(await provider.GetAsync(ct));

@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using NB12.Boilerplate.BuildingBlocks.Application.Eventing.Integration;
+using NB12.Boilerplate.BuildingBlocks.Infrastructure.Inbox;
 using System.Reflection;
 
 namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.EventBus
@@ -10,9 +11,11 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.EventBus
         {
             services.AddOptions<InboxOptions>();
 
-            if (!services.Any(sd => sd.ServiceType == typeof(IInboxStore)))
-                services.AddSingleton<IInboxStore, NoOpInboxStore>();
+            // Resolver für keyed Inbox-Stores (Inbox pro Modul)
+            if (!services.Any(sd => sd.ServiceType == typeof(IInboxStoreResolver)))
+                services.AddScoped<IInboxStoreResolver, InboxStoreResolver>();
 
+            // Stats/Metrics sind optional
             if (!services.Any(sd => sd.ServiceType == typeof(IInboxStatsProvider)))
                 services.AddSingleton<IInboxStatsProvider, NoOpInboxStatsProvider>();
 
@@ -20,6 +23,7 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.EventBus
                 services.AddSingleton<InboxMetrics>();
 
             services.AddSingleton<IEventBus, InMemoryEventBus>();
+            services.AddInboxCore();
 
             foreach (var typeInfo in assemblies.SelectMany(a => a.DefinedTypes))
             {

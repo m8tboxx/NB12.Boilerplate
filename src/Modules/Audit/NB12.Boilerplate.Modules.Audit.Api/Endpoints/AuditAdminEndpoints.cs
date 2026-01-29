@@ -2,10 +2,12 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using NB12.Boilerplate.BuildingBlocks.Api.ResultHandling;
+using NB12.Boilerplate.BuildingBlocks.Application.Ids;
 using NB12.Boilerplate.BuildingBlocks.Application.Messaging.Abstractions;
 using NB12.Boilerplate.BuildingBlocks.Application.Querying;
 using NB12.Boilerplate.Modules.Audit.Application.Commands.CleanupInboxProcessed;
 using NB12.Boilerplate.Modules.Audit.Application.Commands.DeleteInboxMessage;
+using NB12.Boilerplate.Modules.Audit.Application.Commands.ReplayInboxMessage;
 using NB12.Boilerplate.Modules.Audit.Application.Commands.RunAuditRetentionCleanup;
 using NB12.Boilerplate.Modules.Audit.Application.Enums;
 using NB12.Boilerplate.Modules.Audit.Application.Queries.GetAuditRetentionConfig;
@@ -29,6 +31,15 @@ namespace NB12.Boilerplate.Modules.Audit.Api.Endpoints
 
             admin.MapGet("/inbox/paged", GetInboxPaged)
                 .RequireAuthorization(AuditPermissions.InboxRead);
+
+            admin.MapGet("/inbox/{id}", GetInboxById)
+                .RequireAuthorization(AuditPermissions.InboxRead);
+
+            admin.MapPost("/inbox/{id}/replay", ReplayInboxById)
+                .RequireAuthorization(AuditPermissions.InboxManage);
+
+            admin.MapDelete("/inbox/{id}", DeleteInboxById)
+                .RequireAuthorization(AuditPermissions.InboxManage);
 
             admin.MapDelete("/inbox/{integrationEventId:guid}/{handlerName}", DeleteInboxEntry)
                 .RequireAuthorization(AuditPermissions.InboxManage);
@@ -84,6 +95,36 @@ namespace NB12.Boilerplate.Modules.Audit.Api.Endpoints
             return res.ToHttpResult(http, x => Results.Ok(x));
         }
 
+        private static async Task<IResult> GetInboxById(
+            InboxMessageId id,
+            ISender sender,
+            HttpContext http,
+            CancellationToken ct)
+        {
+            var res = await sender.Send(new GetInboxMessageQuery(id), ct);
+            return res.ToHttpResult(http, x => Results.Ok(x));
+        }
+
+        private static async Task<IResult> ReplayInboxById(
+            InboxMessageId id,
+            ISender sender,
+            HttpContext http,
+            CancellationToken ct)
+        {
+            var res = await sender.Send(new ReplayInboxMessageCommand(id), ct);
+            return res.ToHttpResult(http);
+        }
+
+        private static async Task<IResult> DeleteInboxById(
+            InboxMessageId id,
+            ISender sender,
+            HttpContext http,
+            CancellationToken ct)
+        {
+            var res = await sender.Send(new DeleteInboxMessageByIdCommand(id), ct);
+            return res.ToHttpResult(http);
+        }
+
         private static async Task<IResult> DeleteInboxEntry(
             Guid integrationEventId,
             string handlerName,
@@ -126,15 +167,14 @@ namespace NB12.Boilerplate.Modules.Audit.Api.Endpoints
 
         private static InboxMessageState ParseState(string? state)
         {
-            if (string.IsNullOrWhiteSpace(state))
-                return InboxMessageState.All;
+            var s = (state ?? string.Empty).Trim().ToLowerInvariant();
 
-            return state.Trim().ToLowerInvariant() switch
+            return s switch
             {
                 "pending" => InboxMessageState.Pending,
                 "failed" => InboxMessageState.Failed,
                 "processed" => InboxMessageState.Processed,
-                "deadLetterd" => InboxMessageState.DeadLettered,
+                "deadlettered" or "deadletterd" or "dead-lettered" => InboxMessageState.DeadLettered,
                 _ => InboxMessageState.All
             };
         }

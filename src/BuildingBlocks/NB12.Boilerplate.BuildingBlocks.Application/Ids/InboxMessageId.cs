@@ -1,6 +1,6 @@
 ﻿using NB12.Boilerplate.BuildingBlocks.Domain.Abstractions;
 
-namespace NB12.Boilerplate.Modules.Audit.Domain.Ids
+namespace NB12.Boilerplate.BuildingBlocks.Application.Ids
 {
     public sealed record InboxMessageId(Guid Value) : StronglyTypedId<Guid>(Value)
     {

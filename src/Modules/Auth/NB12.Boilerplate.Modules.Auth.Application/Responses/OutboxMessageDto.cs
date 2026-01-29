@@ -6,6 +6,9 @@
         string Type,
         int AttemptCount,
         DateTime? ProcessedAtUtc,
-        string? LastError
-    );
+        string? LastError,
+        DateTimeOffset? LockedUntilUtc,
+        string? LockedBy,
+        DateTime? DeadLetteredAtUtc,
+        string? DeadLetterReason);
 }

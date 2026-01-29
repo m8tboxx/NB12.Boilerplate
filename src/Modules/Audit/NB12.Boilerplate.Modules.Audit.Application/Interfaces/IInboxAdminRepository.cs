@@ -1,7 +1,7 @@
-﻿using NB12.Boilerplate.BuildingBlocks.Application.Querying;
+﻿using NB12.Boilerplate.BuildingBlocks.Application.Ids;
+using NB12.Boilerplate.BuildingBlocks.Application.Querying;
 using NB12.Boilerplate.Modules.Audit.Application.Enums;
 using NB12.Boilerplate.Modules.Audit.Application.Responses;
-using NB12.Boilerplate.Modules.Audit.Domain.Ids;
 
 namespace NB12.Boilerplate.Modules.Audit.Application.Interfaces
 {
@@ -21,9 +21,9 @@ namespace NB12.Boilerplate.Modules.Audit.Application.Interfaces
 
         Task<InboxStatsDto> GetStatsAsync(CancellationToken ct);
 
-        Task<bool> ReplayAsync(InboxMessageId id, CancellationToken ct);
-        Task<bool> DeleteAsync(InboxMessageId id, CancellationToken ct);
-        Task<bool> DeleteAsync(Guid integrationEventId, string handlerName, CancellationToken ct);
+        Task<InboxAdminWriteResult> ReplayAsync(InboxMessageId id, CancellationToken ct);
+        Task<InboxAdminWriteResult> DeleteAsync(InboxMessageId id, CancellationToken ct);
+        Task<InboxAdminWriteResult> DeleteAsync(Guid integrationEventId, string handlerName, CancellationToken ct);
 
         Task<int> CleanupProcessedBeforeAsync(DateTime beforeUtc, int maxRows, CancellationToken ct);
     }

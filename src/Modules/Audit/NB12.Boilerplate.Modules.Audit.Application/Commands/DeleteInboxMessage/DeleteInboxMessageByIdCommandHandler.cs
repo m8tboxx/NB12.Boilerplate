@@ -5,26 +5,26 @@ using NB12.Boilerplate.Modules.Audit.Application.Interfaces;
 
 namespace NB12.Boilerplate.Modules.Audit.Application.Commands.DeleteInboxMessage
 {
-    internal sealed class DeleteInboxMessageCommandHandler
-        : IRequestHandler<DeleteInboxMessageCommand, Result>
+    internal sealed class DeleteInboxMessageByIdCommandHandler
+        : IRequestHandler<DeleteInboxMessageByIdCommand, Result>
     {
         private readonly IInboxAdminRepository _repo;
 
-        public DeleteInboxMessageCommandHandler(IInboxAdminRepository repo) => _repo = repo;
+        public DeleteInboxMessageByIdCommandHandler(IInboxAdminRepository repo) => _repo = repo;
 
-        public async Task<Result> Handle(DeleteInboxMessageCommand cmd, CancellationToken ct)
+        public async Task<Result> Handle(DeleteInboxMessageByIdCommand cmd, CancellationToken ct)
         {
-            var result = await _repo.DeleteAsync(cmd.IntegrationEventId, cmd.HandlerName, ct);
+            var result = await _repo.DeleteAsync(cmd.Id, ct);
 
             return result switch
             {
                 InboxAdminWriteResult.Ok => Result.Success(),
                 InboxAdminWriteResult.Locked => Result.Fail(Error.Conflict(
                     "audit.inbox.locked",
-                    $"Inbox entry '{cmd.IntegrationEventId}'/'{cmd.HandlerName}' is currently locked and cannot be deleted.")),
+                    $"Inbox message '{cmd.Id}' is currently locked and cannot be deleted.")),
                 _ => Result.Fail(Error.NotFound(
                     "audit.inbox.not_found",
-                    $"Inbox entry '{cmd.IntegrationEventId}'/'{cmd.HandlerName}' not found."))
+                    $"Inbox message '{cmd.Id}' not found."))
             };
         }
     }

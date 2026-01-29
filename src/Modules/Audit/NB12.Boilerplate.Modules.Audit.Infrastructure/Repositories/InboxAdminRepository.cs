@@ -1,11 +1,11 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using NB12.Boilerplate.BuildingBlocks.Application.Ids;
 using NB12.Boilerplate.BuildingBlocks.Application.Querying;
+using NB12.Boilerplate.BuildingBlocks.Infrastructure.Inbox;
 using NB12.Boilerplate.BuildingBlocks.Infrastructure.Persistence;
 using NB12.Boilerplate.Modules.Audit.Application.Enums;
 using NB12.Boilerplate.Modules.Audit.Application.Interfaces;
 using NB12.Boilerplate.Modules.Audit.Application.Responses;
-using NB12.Boilerplate.Modules.Audit.Domain.Ids;
-using NB12.Boilerplate.Modules.Audit.Infrastructure.Inbox;
 using NB12.Boilerplate.Modules.Audit.Infrastructure.Persistence;
 using Npgsql;
 using System.Data;
@@ -70,6 +70,7 @@ namespace NB12.Boilerplate.Modules.Audit.Infrastructure.Repositories
                     x.ProcessedAtUtc,
                     x.AttemptCount,
                     x.LastError,
+                    x.LastFailedAtUtc,
                     x.LockedUntilUtc,
                     x.LockedOwner,
                     x.DeadLetteredAtUtc,
@@ -96,6 +97,7 @@ namespace NB12.Boilerplate.Modules.Audit.Infrastructure.Repositories
                     x.ProcessedAtUtc,
                     x.AttemptCount,
                     x.LastError,
+                    x.LastFailedAtUtc,
                     x.LockedUntilUtc,
                     x.LockedOwner,
                     x.DeadLetteredAtUtc,
@@ -122,41 +124,55 @@ namespace NB12.Boilerplate.Modules.Audit.Infrastructure.Repositories
                 OldestFailedReceivedAtUtc: stats.OldestFailedUtc);
         }
 
-        public async Task<bool> ReplayAsync(InboxMessageId id, CancellationToken ct)
+        public async Task<InboxAdminWriteResult> ReplayAsync(InboxMessageId id, CancellationToken ct)
         {
             await using var db = await _dbFactory.CreateDbContextAsync(ct);
 
             var msg = await db.InboxMessages.SingleOrDefaultAsync(x => x.Id == id, ct);
 
             if (msg is null)
-                return false;
+                return InboxAdminWriteResult.NotFound;
+
+            if (IsLocked(msg, DateTime.UtcNow))
+                return InboxAdminWriteResult.Locked;
 
             msg.ResetForReplay();
             await db.SaveChangesAsync(ct);
-            return true;
+            return InboxAdminWriteResult.Ok;
         }
 
-        public async Task<bool> DeleteAsync(InboxMessageId id, CancellationToken ct)
+        public async Task<InboxAdminWriteResult> DeleteAsync(InboxMessageId id, CancellationToken ct)
         {
             await using var db = await _dbFactory.CreateDbContextAsync(ct);
 
-            var affected = await db.InboxMessages
-                .Where(x => x.Id == id)
-                .ExecuteDeleteAsync(ct);
+            var msg = await db.InboxMessages.SingleOrDefaultAsync(x => x.Id == id, ct);
+            if (msg is null)
+                return InboxAdminWriteResult.NotFound;
 
-            return affected > 0;
+            if (IsLocked(msg, DateTime.UtcNow))
+                return InboxAdminWriteResult.Locked;
+
+            db.Remove(msg);
+            await db.SaveChangesAsync(ct);
+            return InboxAdminWriteResult.Ok;
         }
 
-        public async Task<bool> DeleteAsync(Guid integrationEventId, string handlerName, CancellationToken ct)
+        public async Task<InboxAdminWriteResult> DeleteAsync(Guid integrationEventId, string handlerName, CancellationToken ct)
         {
             await using var db = await _dbFactory.CreateDbContextAsync(ct);
 
-            var sql = "DELETE FROM \"audit\".\"InboxMessages\" WHERE \"IntegrationEventId\" = @id AND \"HandlerName\" = @handler;";
-            var affected = await db.Database.ExecuteSqlRawAsync(sql,
-                new NpgsqlParameter("id", integrationEventId),
-                new NpgsqlParameter("handler", handlerName));
+            var msg = await db.InboxMessages
+                .SingleOrDefaultAsync(x => x.IntegrationEventId == integrationEventId && x.HandlerName == handlerName, ct);
 
-            return affected > 0;
+            if (msg is null)
+                return InboxAdminWriteResult.NotFound;
+
+            if (IsLocked(msg, DateTime.UtcNow))
+                return InboxAdminWriteResult.Locked;
+
+            db.Remove(msg);
+            await db.SaveChangesAsync(ct);
+            return InboxAdminWriteResult.Ok;
         }
 
         public async Task<int> CleanupProcessedBeforeAsync(DateTime beforeUtc, int maxRows, CancellationToken ct)
@@ -174,7 +190,8 @@ namespace NB12.Boilerplate.Modules.Audit.Infrastructure.Repositories
                     LIMIT @limit
                 );";
 
-            return await db.Database.ExecuteSqlRawAsync(sql,
+            return await db.Database.ExecuteSqlRawAsync(
+                sql,
                 new NpgsqlParameter("before", beforeUtc),
                 new NpgsqlParameter("limit", maxRows));
         }
@@ -188,10 +205,16 @@ namespace NB12.Boilerplate.Modules.Audit.Infrastructure.Repositories
             {
                 "attemptcount" => desc ? q.OrderByDescending(x => x.AttemptCount) : q.OrderBy(x => x.AttemptCount),
                 "processedatutc" => desc ? q.OrderByDescending(x => x.ProcessedAtUtc) : q.OrderBy(x => x.ProcessedAtUtc),
+                "lastfailedatutc" => desc ? q.OrderByDescending(x => x.LastFailedAtUtc) : q.OrderBy(x => x.LastFailedAtUtc),
+                "deadletteredatutc" => desc ? q.OrderByDescending(x => x.DeadLetteredAtUtc) : q.OrderBy(x => x.DeadLetteredAtUtc),
+                "lockeduntilutc" => desc ? q.OrderByDescending(x => x.LockedUntilUtc) : q.OrderBy(x => x.LockedUntilUtc),
                 "handlername" => desc ? q.OrderByDescending(x => x.HandlerName) : q.OrderBy(x => x.HandlerName),
                 "eventtype" => desc ? q.OrderByDescending(x => x.EventType) : q.OrderBy(x => x.EventType),
                 _ => desc ? q.OrderByDescending(x => x.ReceivedAtUtc) : q.OrderBy(x => x.ReceivedAtUtc),
             };
         }
+
+        private static bool IsLocked(InboxMessage msg, DateTime nowUtc)
+            => msg.LockedUntilUtc is not null && msg.LockedUntilUtc.Value > nowUtc;
     }
 }

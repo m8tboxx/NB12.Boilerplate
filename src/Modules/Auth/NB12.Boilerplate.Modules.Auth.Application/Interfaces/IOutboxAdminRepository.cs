@@ -1,4 +1,5 @@
-﻿using NB12.Boilerplate.BuildingBlocks.Application.Querying;
+﻿using NB12.Boilerplate.BuildingBlocks.Application.Enums;
+using NB12.Boilerplate.BuildingBlocks.Application.Querying;
 using NB12.Boilerplate.Modules.Auth.Application.Enums;
 using NB12.Boilerplate.Modules.Auth.Application.Responses;
 
@@ -27,8 +28,7 @@ namespace NB12.Boilerplate.Modules.Auth.Application.Interfaces
         Task<OutboxMessageDetailsDto?> GetByIdAsync(Guid id, CancellationToken ct);
         Task<OutboxStatsDto> GetStatsAsync(CancellationToken ct);
 
-        Task<bool> ReplayAsync(Guid id, CancellationToken ct);
-
-        Task<bool> DeleteAsync(Guid id, CancellationToken ct);
+        Task<OutboxAdminWriteResult> ReplayAsync(Guid id, CancellationToken ct);
+        Task<OutboxAdminWriteResult> DeleteAsync(Guid id, CancellationToken ct);
     }
 }

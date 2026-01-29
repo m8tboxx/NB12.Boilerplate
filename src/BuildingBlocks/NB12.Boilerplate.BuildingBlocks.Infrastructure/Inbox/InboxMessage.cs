@@ -1,12 +1,12 @@
-﻿using NB12.Boilerplate.Modules.Audit.Domain.Ids;
+﻿using NB12.Boilerplate.BuildingBlocks.Application.Ids;
 
-namespace NB12.Boilerplate.Modules.Audit.Infrastructure.Inbox
+namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Inbox
 {
     /// <summary>
-    /// Inbox record for consumer-side idempotency.
+    /// Consumer-side idempotency record (Inbox Pattern).
     /// Composite key: (IntegrationEventId, HandlerName)
     /// </summary>
-    internal sealed class InboxMessage
+    public sealed class InboxMessage
     {
         public InboxMessage(
             InboxMessageId id,
@@ -27,16 +27,22 @@ namespace NB12.Boilerplate.Modules.Audit.Infrastructure.Inbox
 
         public InboxMessageId Id { get; private set; }
         public Guid IntegrationEventId { get; private set; }
-        public string HandlerName { get; private set; } = string.Empty!;
+        public string HandlerName { get; private set; } = string.Empty;
 
-        public string EventType { get; private set; } = string.Empty; // CLR name or registry name
+        public string EventType { get; private set; } = string.Empty;
         public string PayloadJson { get; private set; } = string.Empty;
 
         public DateTime ReceivedAtUtc { get; private set; }
         public DateTime? ProcessedAtUtc { get; private set; }
 
+        /// <summary>
+        /// Failed attempts count (NOT total tries).
+        /// Pending = AttemptCount == 0 and ProcessedAtUtc == null
+        /// Failed  = AttemptCount > 0  and ProcessedAtUtc == null
+        /// </summary>
         public int AttemptCount { get; private set; }
         public string? LastError { get; private set; }
+        public DateTime? LastFailedAtUtc { get; private set; }
 
         public DateTime? LockedUntilUtc { get; private set; }
         public string? LockedOwner { get; private set; }
@@ -44,11 +50,13 @@ namespace NB12.Boilerplate.Modules.Audit.Infrastructure.Inbox
         public DateTime? DeadLetteredAtUtc { get; private set; }
         public string? DeadLetterReason { get; private set; }
 
-
-        public void MarkFailed(string error)
+        public void MarkFailed(string error, DateTime failedAtUtc)
         {
             AttemptCount++;
             LastError = error;
+            LastFailedAtUtc = failedAtUtc;
+            LockedUntilUtc = null;
+            LockedOwner = null;
         }
 
         public void MarkProcessed(DateTime processedAtUtc)
@@ -56,6 +64,8 @@ namespace NB12.Boilerplate.Modules.Audit.Infrastructure.Inbox
             ProcessedAtUtc = processedAtUtc;
             LockedUntilUtc = null;
             LockedOwner = null;
+            LastError = null;
+            LastFailedAtUtc = null;
         }
 
         public void Lock(string owner, DateTime lockedUntilUtc)
@@ -75,10 +85,9 @@ namespace NB12.Boilerplate.Modules.Audit.Infrastructure.Inbox
             ProcessedAtUtc = null;
             AttemptCount = 0;
             LastError = null;
-
+            LastFailedAtUtc = null;
             LockedUntilUtc = null;
             LockedOwner = null;
-
             DeadLetteredAtUtc = null;
             DeadLetterReason = null;
         }

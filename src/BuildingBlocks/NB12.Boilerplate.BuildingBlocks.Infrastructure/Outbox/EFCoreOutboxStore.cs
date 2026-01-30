@@ -3,7 +3,7 @@ using NB12.Boilerplate.BuildingBlocks.Infrastructure.Ids;
 
 namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Outbox
 {
-    public sealed class EfCoreOutboxStore<TDbContext>(TDbContext db, string module) : IModuleOutboxStore
+    public sealed class EfCoreOutboxStore<TDbContext>(IDbContextFactory<TDbContext> dbFactory, string module) : IModuleOutboxStore
     where TDbContext : DbContext
     {
         public string Module { get; } = module;
@@ -21,6 +21,8 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Outbox
 
             var now = DateTimeOffset.UtcNow;
             var lockedUntilUtc = now.Add(lockTtl);
+
+            await using var db = await dbFactory.CreateDbContextAsync(ct);
 
             var table = GetQualifiedTableName(db);
 
@@ -53,6 +55,8 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Outbox
             DateTime utcNow, 
             CancellationToken ct)
         {
+            await using var db = await dbFactory.CreateDbContextAsync(ct);
+
             var table = GetQualifiedTableName(db);
 
             var sql = $@"
@@ -79,6 +83,8 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Outbox
             OutboxFailurePlan plan, 
             CancellationToken ct)
         {
+            await using var db = await dbFactory.CreateDbContextAsync(ct);
+
             var table = GetQualifiedTableName(db);
 
             if (plan.Action == OutboxFailureAction.DeadLetter)

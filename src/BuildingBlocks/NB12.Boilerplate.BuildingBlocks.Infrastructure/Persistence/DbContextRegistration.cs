@@ -5,11 +5,6 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Persistence
 {
     public static class DbContextRegistration
     {
-        /// <summary>
-        /// Registers:
-        /// - IDbContextFactory<TContext> as scoped (so it may use scoped services in configuration, e.g. interceptors)
-        /// - TContext itself as scoped, created once per scope via the factory (Identity/UoW friendly)
-        /// </summary>
         public static IServiceCollection AddNpgsqlDbContextFactoryAndScopedContext<TContext>(
             this IServiceCollection services,
             string connectionString,

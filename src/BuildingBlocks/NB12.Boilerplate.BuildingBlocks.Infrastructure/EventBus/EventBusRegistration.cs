@@ -12,8 +12,8 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.EventBus
             services.AddOptions<InboxOptions>();
 
             // Resolver für keyed Inbox-Stores (Inbox pro Modul)
-            if (!services.Any(sd => sd.ServiceType == typeof(IInboxStoreResolver)))
-                services.AddScoped<IInboxStoreResolver, InboxStoreResolver>();
+            //if (!services.Any(sd => sd.ServiceType == typeof(IInboxStoreResolver)))
+            //    services.AddScoped<IInboxStoreResolver, InboxStoreResolver>();
 
             // Stats/Metrics sind optional
             if (!services.Any(sd => sd.ServiceType == typeof(IInboxStatsProvider)))

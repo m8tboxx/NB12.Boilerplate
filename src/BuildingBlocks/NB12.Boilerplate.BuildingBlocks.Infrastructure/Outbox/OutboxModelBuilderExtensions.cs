@@ -34,10 +34,9 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Outbox
                 builder.HasIndex(x => x.ProcessedAtUtc);
                 builder.HasIndex(x => x.LockedUntilUtc);
                 builder.HasIndex(x => x.DeadLetteredAtUtc);
+                builder.HasIndex(x => x.OccurredAtUtc);
 
-
-                builder.HasIndex(x => new { x.ProcessedAtUtc, x.DeadLetteredAtUtc, x.LockedUntilUtc });
-
+                builder.HasIndex(x => new { x.ProcessedAtUtc, x.DeadLetteredAtUtc, x.LockedUntilUtc, x.OccurredAtUtc });
             });
         }
     }

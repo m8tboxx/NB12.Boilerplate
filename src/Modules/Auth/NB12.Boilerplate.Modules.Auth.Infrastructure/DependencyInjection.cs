@@ -54,9 +54,6 @@ namespace NB12.Boilerplate.Modules.Auth.Infrastructure
                .ValidateDataAnnotations()
                .ValidateOnStart();
 
-            // ONE registration path:
-            // - scoped factory (can use scoped interceptors)
-            // - scoped AuthDbContext created from factory (Identity/UoW safe)
             services.AddNpgsqlDbContextFactoryAndScopedContext<AuthDbContext>(
                 connectionString,
                 configure: (sp, options) =>
@@ -125,8 +122,7 @@ namespace NB12.Boilerplate.Modules.Auth.Infrastructure
             // Seeding
             services.AddScoped<AuthSeeder>();
 
-            services.AddScoped<IModuleOutboxStore>(sp =>
-                new EfCoreOutboxStore<AuthDbContext>(sp.GetRequiredService<AuthDbContext>(), module: "Auth"));
+            services.AddOutboxForModule<AuthDbContext>("Auth", configuration);
 
             return services;
         }

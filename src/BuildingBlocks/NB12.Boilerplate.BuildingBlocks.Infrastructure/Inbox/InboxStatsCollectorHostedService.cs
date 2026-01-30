@@ -9,19 +9,23 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Inbox
 {
     public sealed class InboxStatsCollectorHostedService<TDbContext>(
         IDbContextFactory<TDbContext> dbFactory,
-        IOptions<InboxMonitoringOptions> options,
+        IOptionsMonitor<InboxMonitoringOptions> options,
         ModuleInboxStatsState state,
         ILogger<InboxStatsCollectorHostedService<TDbContext>> logger) : BackgroundService
         where TDbContext : DbContext
     {
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            if (!options.Value.Enabled) return;
-
-            var delay = TimeSpan.FromSeconds(Math.Max(1, options.Value.PollSeconds));
-
             while (!stoppingToken.IsCancellationRequested)
             {
+                var opt = options.Get(state.ModuleKey);
+
+                if (!opt.Enabled)
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken);
+                    continue;
+                }
+                    
                 try
                 {
                     await using var db = await dbFactory.CreateDbContextAsync(stoppingToken);
@@ -39,12 +43,12 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Inbox
                         Locked: stats.Locked,
                         LastUpdatedUtc: DateTime.UtcNow));
                 }
-                catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { }
                 catch (Exception ex)
                 {
                     logger.LogWarning(ex, "Inbox stats polling failed. Module={Module}", state.ModuleKey);
                 }
 
+                var delay = TimeSpan.FromSeconds(Math.Max(1, opt.PollSeconds));
                 await Task.Delay(delay, stoppingToken);
             }
         }

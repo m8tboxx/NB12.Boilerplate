@@ -9,7 +9,7 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Inbox
 {
     public sealed class InboxCleanupHostedService<TDbContext>(
         IDbContextFactory<TDbContext> dbFactory,
-        IOptions<InboxCleanupOptions> options,
+        IOptionsMonitor<InboxCleanupOptions> options,
         ModuleInboxStatsState state,
         ILogger<InboxCleanupHostedService<TDbContext>> logger) : BackgroundService
         where TDbContext : DbContext
@@ -18,24 +18,28 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Inbox
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            if (!options.Value.Enabled) return;
-
-            var delay = TimeSpan.FromMinutes(Math.Max(1, options.Value.RunEveryMinutes));
-
             while (!stoppingToken.IsCancellationRequested)
             {
+                var opt = options.Get(state.ModuleKey);
+
+                if(!opt.Enabled)
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken);
+                    continue;
+                }
+
                 try
                 {
                     await using var db = await dbFactory.CreateDbContextAsync(stoppingToken);
                     var utcNow = DateTime.UtcNow;
 
-                    var processedCutoff = utcNow.AddDays(-Math.Max(1, options.Value.RetainProcessedDays));
+                    var processedCutoff = utcNow.AddDays(-Math.Max(1, opt.RetainProcessedDays));
                     var deletedProcessed = await DeleteProcessedBeforeAsync(db, processedCutoff, BatchSize, stoppingToken);
 
                     int deletedFailed = 0;
-                    if (options.Value.RetainFailedDays > 0)
+                    if (opt.RetainFailedDays > 0)
                     {
-                        var failedCutoff = utcNow.AddDays(-options.Value.RetainFailedDays);
+                        var failedCutoff = utcNow.AddDays(-opt.RetainFailedDays);
                         deletedFailed = await DeleteFailedBeforeAsync(db, failedCutoff, utcNow, BatchSize, stoppingToken);
                     }
 
@@ -43,12 +47,12 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Inbox
                         logger.LogInformation("Inbox cleanup completed. Module={Module} DeletedProcessed={DP} DeletedFailed={DF}",
                             state.ModuleKey, deletedProcessed, deletedFailed);
                 }
-                catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { }
                 catch (Exception ex)
                 {
                     logger.LogWarning(ex, "Inbox cleanup failed. Module={Module}", state.ModuleKey);
                 }
 
+                var delay = TimeSpan.FromMinutes(Math.Max(1, opt.RunEveryMinutes));
                 await Task.Delay(delay, stoppingToken);
             }
         }

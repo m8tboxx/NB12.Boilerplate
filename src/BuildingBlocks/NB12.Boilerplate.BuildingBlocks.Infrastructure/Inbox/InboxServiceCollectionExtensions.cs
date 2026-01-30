@@ -25,23 +25,20 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Inbox
 
             // Named options per module: global section + per-module override section.
             services.AddOptions<InboxMonitoringOptions>(moduleKey)
-                .Configure<IConfiguration>((opt, cfg) =>
+                .Configure(opt =>
                 {
-                    cfg.GetSection("InboxMonitoring").Bind(opt);
-                    cfg.GetSection($"InboxMonitoring:Modules:{moduleKey}").Bind(opt);
+                    configuration.GetSection("InboxMonitoring").Bind(opt);
+                    configuration.GetSection($"InboxMonitoring:Modules:{moduleKey}").Bind(opt);
                 });
 
             services.AddOptions<InboxCleanupOptions>(moduleKey)
-                .Configure<IConfiguration>((opt, cfg) =>
+                .Configure(opt =>
                 {
-                    cfg.GetSection("InboxCleanup").Bind(opt);
-                    cfg.GetSection($"InboxCleanup:Modules:{moduleKey}").Bind(opt);
+                    configuration.GetSection("InboxCleanup").Bind(opt);
+                    configuration.GetSection($"InboxCleanup:Modules:{moduleKey}").Bind(opt);
                 });
 
-            // Keyed inbox store for this module
-            //services.AddKeyedSingleton<IInboxStore, EfCoreInboxStore<TDbContext>>(moduleKey);
-
-            services.AddKeyedScoped<IInboxStore>(moduleKey, (sp, _) =>
+            services.AddKeyedSingleton<IInboxStore>(moduleKey, (sp, _) =>
                 new EfCoreInboxStore<TDbContext>(sp.GetRequiredService<IDbContextFactory<TDbContext>>()));
 
             // Keyed stats state for this module + expose as module provider via IEnumerable later if needed
@@ -51,7 +48,7 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Inbox
             services.AddHostedService(sp =>
             {
                 var factory = sp.GetRequiredService<IDbContextFactory<TDbContext>>();
-                var opts = sp.GetRequiredService<IOptions<InboxMonitoringOptions>>();
+                var opts = sp.GetRequiredService<IOptionsMonitor<InboxMonitoringOptions>>();
                 var state = sp.GetRequiredKeyedService<ModuleInboxStatsState>(moduleKey);
                 var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<InboxStatsCollectorHostedService<TDbContext>>>();
                 return new InboxStatsCollectorHostedService<TDbContext>(factory, opts, state, logger);
@@ -60,7 +57,7 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Inbox
             services.AddHostedService(sp =>
             {
                 var factory = sp.GetRequiredService<IDbContextFactory<TDbContext>>();
-                var opts = sp.GetRequiredService<IOptions<InboxCleanupOptions>>();
+                var opts = sp.GetRequiredService<IOptionsMonitor<InboxCleanupOptions>>();
                 var state = sp.GetRequiredKeyedService<ModuleInboxStatsState>(moduleKey);
                 var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<InboxCleanupHostedService<TDbContext>>>();
                 return new InboxCleanupHostedService<TDbContext>(factory, opts, state, logger);

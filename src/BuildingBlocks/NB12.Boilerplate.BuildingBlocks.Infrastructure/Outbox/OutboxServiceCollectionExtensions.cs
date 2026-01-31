@@ -4,9 +4,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NB12.Boilerplate.BuildingBlocks.Application.Eventing.Integration;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Outbox
 {
@@ -14,8 +11,7 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Outbox
     {
         public static IServiceCollection AddOutboxForModule<TDbContext>(
             this IServiceCollection services,
-            string moduleKey,
-            IConfiguration configuration)
+            string moduleKey)
             where TDbContext : DbContext
         {
             if (string.IsNullOrWhiteSpace(moduleKey))
@@ -24,9 +20,6 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Outbox
             // Store (producer-side)
             services.AddScoped<IModuleOutboxStore>(sp =>
                 new EfCoreOutboxStore<TDbContext>(sp.GetRequiredService<IDbContextFactory<TDbContext>>(), moduleKey));
-
-            // Cleanup (optional, config-driven)
-            services.AddOutboxCleanupForModule<TDbContext>(moduleKey, configuration);
 
             return services;
         }
@@ -51,6 +44,7 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Outbox
             // HostedService nur registrieren, wenn es (global oder per Modul) wirklich aktiv ist
             var globalEnabled = configuration.GetSection("OutboxCleanup").GetValue<bool>("Enabled");
             var moduleEnabled = configuration.GetSection($"OutboxCleanup:Modules:{moduleKey}").GetValue<bool?>("Enabled");
+
             if (!(moduleEnabled ?? globalEnabled))
                 return services;
 

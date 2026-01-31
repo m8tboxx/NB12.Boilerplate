@@ -4,7 +4,7 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Outbox
 {
     public interface IModuleOutboxStore
     {
-        string Module { get; }
+        string ModuleKey { get; }
 
         /// <summary>
         /// Atomically claims a batch of unprocessed outbox messages for a given lock owner.
@@ -16,6 +16,13 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Outbox
             TimeSpan lockTtl,
             CancellationToken ct);
         Task MarkProcessed(OutboxMessageId id, string lockOwner, DateTime utcNow, CancellationToken ct);
+
         Task MarkFailed(OutboxMessageId id, string lockOwner, DateTime utcNow, Exception ex, OutboxFailurePlan plan, CancellationToken ct);
+
+        //Task<int> CleanupAsync(
+        //    DateTime publishedBeforeUtc,
+        //    DateTime deadLetterBeforeUtc,
+        //    int batchSize,
+        //    CancellationToken ct);
     }
 }

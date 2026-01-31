@@ -34,16 +34,16 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Outbox
                     var deletedFailed = 0;
 
                     // Processed
-                    if (opt.RetainProcessedDays > 0)
+                    if (opt.RetainPublishedDays > 0)
                     {
-                        var cutoff = utcNow.AddDays(-opt.RetainProcessedDays);
+                        var cutoff = utcNow.AddDays(-opt.RetainPublishedDays);
                         deletedProcessed = await DeleteProcessedBeforeAsync(db, cutoff, batch, stoppingToken);
                     }
 
                     // Deadletters
-                    if (opt.RetainDeadLetteredDays > 0)
+                    if (opt.RetainDeadLetterDays > 0)
                     {
-                        var cutoff = utcNow.AddDays(-opt.RetainDeadLetteredDays);
+                        var cutoff = utcNow.AddDays(-opt.RetainDeadLetterDays);
                         deletedDead = await DeleteDeadLetteredBeforeAsync(db, cutoff, batch, stoppingToken);
                     }
 

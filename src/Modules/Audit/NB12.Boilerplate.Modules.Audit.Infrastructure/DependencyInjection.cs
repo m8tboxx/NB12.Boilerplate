@@ -7,6 +7,7 @@ using NB12.Boilerplate.BuildingBlocks.Infrastructure.Persistence;
 using NB12.Boilerplate.Modules.Audit.Application.Interfaces;
 using NB12.Boilerplate.Modules.Audit.Application.Options;
 using NB12.Boilerplate.Modules.Audit.Contracts.Auditing;
+using NB12.Boilerplate.Modules.Audit.Infrastructure.Constants;
 using NB12.Boilerplate.Modules.Audit.Infrastructure.Persistence;
 using NB12.Boilerplate.Modules.Audit.Infrastructure.Repositories;
 using NB12.Boilerplate.Modules.Audit.Infrastructure.Services;
@@ -31,7 +32,7 @@ namespace NB12.Boilerplate.Modules.Audit.Infrastructure
 
             // Inbox Admin
             services.AddScoped<IInboxAdminRepository, InboxAdminRepository>();
-            services.AddInboxForModule<AuditDbContext>("Audit", config);
+            services.AddInboxForModule<AuditDbContext>(AuditModule.Key, config);
 
             // Retention
             services.AddOptions<AuditRetentionOptions>()

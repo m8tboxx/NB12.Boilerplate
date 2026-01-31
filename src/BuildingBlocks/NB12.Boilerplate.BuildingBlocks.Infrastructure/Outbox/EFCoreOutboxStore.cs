@@ -6,7 +6,7 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Outbox
     public sealed class EfCoreOutboxStore<TDbContext>(IDbContextFactory<TDbContext> dbFactory, string module) : IModuleOutboxStore
     where TDbContext : DbContext
     {
-        public string Module { get; } = module;
+        public string ModuleKey { get; } = module;
 
         public async Task<IReadOnlyList<OutboxMessage>> ClaimUnprocessed(
             int take,
@@ -136,6 +136,40 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Outbox
                 ct);
         }
 
+
+        //public async Task<int> CleanupAsync(
+        //    DateTime publishedBeforeUtc,
+        //    DateTime deadLetterBeforeUtc,
+        //    int batchSize,
+        //    CancellationToken ct)
+        //{
+        //    batchSize = Math.Max(1, Math.Min(batchSize, 50_000));
+
+        //    await using var db = await dbFactory.CreateDbContextAsync(ct);
+
+        //    var table = GetQualifiedTableName(db); 
+
+        //    var sql = $@"
+        //        DELETE FROM {table}
+        //        WHERE ctid IN (
+        //          SELECT ctid
+        //          FROM {table}
+        //          WHERE
+        //            (""PublishedAtUtc"" IS NOT NULL AND ""PublishedAtUtc"" < @p0)
+        //            OR
+        //            (""DeadLetteredAtUtc"" IS NOT NULL AND ""DeadLetteredAtUtc"" < @p1)
+        //          ORDER BY COALESCE(""PublishedAtUtc"", ""DeadLetteredAtUtc"") ASC
+        //          LIMIT @p2
+        //        );";
+
+        //    // ExecuteSqlRawAsync returns affected rows
+        //    var deleted = await db.Database.ExecuteSqlRawAsync(
+        //        sql,
+        //        parameters: [publishedBeforeUtc, deadLetterBeforeUtc, batchSize],
+        //        cancellationToken: ct);
+
+        //    return deleted;
+        //}
 
         private static string GetQualifiedTableName(DbContext db)
         {

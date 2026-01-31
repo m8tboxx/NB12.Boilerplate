@@ -12,6 +12,7 @@ using NB12.Boilerplate.BuildingBlocks.Infrastructure.Persistence;
 using NB12.Boilerplate.Modules.Auth.Application.Abstractions;
 using NB12.Boilerplate.Modules.Auth.Application.Interfaces;
 using NB12.Boilerplate.Modules.Auth.Application.Options;
+using NB12.Boilerplate.Modules.Auth.Infrastructure.Constants;
 using NB12.Boilerplate.Modules.Auth.Infrastructure.Models;
 using NB12.Boilerplate.Modules.Auth.Infrastructure.Persistence;
 using NB12.Boilerplate.Modules.Auth.Infrastructure.Persistence.Options;
@@ -122,7 +123,7 @@ namespace NB12.Boilerplate.Modules.Auth.Infrastructure
             // Seeding
             services.AddScoped<AuthSeeder>();
 
-            services.AddOutboxForModule<AuthDbContext>("Auth", configuration);
+            services.AddOutboxForModule<AuthDbContext>(AuthModule.Key);
 
             return services;
         }

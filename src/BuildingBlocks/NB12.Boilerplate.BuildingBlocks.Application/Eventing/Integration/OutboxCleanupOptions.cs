@@ -2,18 +2,20 @@
 {
     public sealed record OutboxCleanupOptions
     {
-        public bool Enabled { get; init; } = false;
+        public bool Enabled { get; set; } = false;
 
-        public int RunEveryMinutes { get; init; } = 60;
+        public int RunEveryMinutes { get; set; } = 60;
 
-        // Batch-Delete
-        public int BatchSize { get; init; } = 5_000;
+        /// <summary>Batch delete size per cycle per module (avoid long locks).</summary>
+        public int BatchSize { get; set; } = 5000;
 
-        // Retention
-        public int RetainProcessedDays { get; init; } = 30;
-        public int RetainDeadLetteredDays { get; init; } = 90;
+        /// <summary>Delete published messages older than this.</summary>
+        public int RetainPublishedDays { get; set; } = 30;
 
-        // Optional: default=0 (deactivated)
-        public int RetainFailedDays { get; init; } = 0;
+        /// <summary>Delete dead-lettered messages older than this.</summary>
+        public int RetainDeadLetterDays { get; set; } = 90;
+
+        /// <summary>Delete failed messages older than this.</summary>
+        public int RetainFailedDays { get; set; } = 60;
     }
 }

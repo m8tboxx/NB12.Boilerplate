@@ -76,7 +76,7 @@ namespace NB12.Boilerplate.Host.Worker
 
                                 logger.LogError(ex,
                                     "Outbox publish failed. Module={Module} MsgId={MsgId} Type={Type} Attempt={Attempt} Plan={Plan} Worker={WorkerId}",
-                                    store.Module, msg.Id, msg.Type, nextAttempt, plan.Action, _workerId);
+                                    store.ModuleKey, msg.Id, msg.Type, nextAttempt, plan.Action, _workerId);
 
                                 await store.MarkFailed(
                                     msg.Id,

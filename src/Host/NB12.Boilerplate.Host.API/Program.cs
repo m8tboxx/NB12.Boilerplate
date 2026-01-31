@@ -35,12 +35,13 @@ builder.Host.UseSerilog((ctx, services, cfg) =>
        .Enrich.FromLogContext());
 
 // Module Loading
-var serviceModules = ModuleComposition.ServiceModules();
+var serviceModules = ModuleComposition.ServicesForApi();
+var scanAssemblies = ModuleComposition.AssembliesForApiScanning();
+var registryAssemblies = ModuleComposition.RegistryAssembliesForApi();
 var endpointModules = ModuleComposition.EndpointModules();
-var moduleAssemblies = ModuleComposition.ModuleAssemblies();
 
 // scanning
-builder.Services.AddEventBus(moduleAssemblies);
+builder.Services.AddEventBus(scanAssemblies);
 
 // Inbox options (consumer-side idempotency for integration event handlers)
 builder.Services.Configure<InboxOptions>(builder.Configuration.GetSection("Inbox"));
@@ -54,7 +55,7 @@ foreach (var module in serviceModules)
     module.AddModule(builder.Services, builder.Configuration);
 }
 
-builder.Services.AddMessaging(moduleAssemblies);
+builder.Services.AddMessaging(scanAssemblies);
 
 builder.Services.AddAuthorization(options =>
 {
@@ -64,8 +65,8 @@ builder.Services.AddAuthorization(options =>
 });
 
 // Global Pipeline
-builder.Services.AddValidatorsFromAssemblies(moduleAssemblies);
-builder.Services.AddDomainEventing(moduleAssemblies);
+builder.Services.AddValidatorsFromAssemblies(scanAssemblies);
+builder.Services.AddDomainEventing(scanAssemblies);
 
 builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(AuditBehavior<,>));

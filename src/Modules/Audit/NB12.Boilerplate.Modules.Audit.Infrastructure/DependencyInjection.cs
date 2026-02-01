@@ -31,8 +31,8 @@ namespace NB12.Boilerplate.Modules.Audit.Infrastructure
             services.AddScoped<IErrorAuditWriter, EfCoreErrorLogWriter>();
 
             // Inbox Admin
-            services.AddScoped<IInboxAdminRepository, InboxAdminRepository>();
             services.AddInboxForModule<AuditDbContext>(AuditModule.Key, config);
+            services.AddInboxAdminForModule<AuditDbContext>(AuditModule.Key);
 
             // Retention
             services.AddOptions<AuditRetentionOptions>()
@@ -44,13 +44,6 @@ namespace NB12.Boilerplate.Modules.Audit.Infrastructure
             services.AddScoped<IAuditRetentionConfigProvider, AuditRetentionConfigProvider>();
             services.AddScoped<IAuditRetentionStatusProvider, AuditRetentionStatusProvider>();
             services.AddScoped<IAuditRetentionService, AuditRetentionService>();
-
-            // HostedService nur registrieren, wenn konfiguriert (sonst läuft er sinnlos im API Host)
-            var retentionEnabled = config.GetSection(AuditRetentionOptions.SectionName).GetValue<bool>("Enabled");
-            if (retentionEnabled)
-            {
-                services.AddHostedService<AuditRetentionHostedService>();
-            }
 
             services.AddSingleton<IAuditIntegrationEventFactory, AuditIntegrationEventFactory>();
 

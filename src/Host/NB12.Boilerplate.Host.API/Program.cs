@@ -37,7 +37,7 @@ builder.Host.UseSerilog((ctx, services, cfg) =>
 // Module Loading
 var serviceModules = ModuleComposition.ServicesForApi();
 var scanAssemblies = ModuleComposition.AssembliesForApiScanning();
-var registryAssemblies = ModuleComposition.RegistryAssembliesForApi();
+//var registryAssemblies = ModuleComposition.RegistryAssembliesForApi(); TODO: DELETE?
 var endpointModules = ModuleComposition.EndpointModules();
 
 // scanning

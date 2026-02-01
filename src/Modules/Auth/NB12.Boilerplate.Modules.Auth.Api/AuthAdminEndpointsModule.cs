@@ -16,7 +16,6 @@ namespace NB12.Boilerplate.Modules.Auth.Api
                 .WithTags("AuthAdmin");
 
             group.MapAuthAdminEndpoints();
-            group.MapOutboxAdminEndpoints();
         }
     }
 }

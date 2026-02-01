@@ -10,7 +10,7 @@ using System.Reflection;
 
 namespace NB12.Boilerplate.Modules.Auth.Infrastructure
 {
-    public sealed class AuthServicesModule : IServiceModule, IModuleAssemblyProvider, IModuleKeyProvider
+    public sealed class AuthServicesModule : IServiceModule, IModuleAssemblyProvider, IModuleKeyProvider, IWorkerModule
     {
         public string Name => "AuthModule";
         public string ModuleKey => AuthModule.Key;

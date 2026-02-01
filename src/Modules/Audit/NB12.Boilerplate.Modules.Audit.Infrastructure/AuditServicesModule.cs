@@ -8,11 +8,12 @@ using NB12.Boilerplate.Modules.Audit.Application.Security;
 using NB12.Boilerplate.Modules.Audit.Contracts.IntegrationEvents;
 using NB12.Boilerplate.Modules.Audit.Infrastructure.Constants;
 using NB12.Boilerplate.Modules.Audit.Infrastructure.Persistence;
+using NB12.Boilerplate.Modules.Audit.Infrastructure.Services;
 using System.Reflection;
 
 namespace NB12.Boilerplate.Modules.Audit.Infrastructure
 {
-    public sealed class AuditServicesModule : IServiceModule, IModuleAssemblyProvider, IModuleKeyProvider
+    public sealed class AuditServicesModule : IServiceModule, IModuleAssemblyProvider, IModuleKeyProvider, IWorkerModule
     {
         public string Name => "AuditModule";
         public string ModuleKey => AuditModule.Key;
@@ -29,6 +30,7 @@ namespace NB12.Boilerplate.Modules.Audit.Infrastructure
         public void AddWorker(IServiceCollection services, IConfiguration configuration)
         {
             services.AddInboxWorkerForModule<AuditDbContext>("Audit", configuration);
+            services.AddHostedService<AuditRetentionHostedService>();
         }
 
 

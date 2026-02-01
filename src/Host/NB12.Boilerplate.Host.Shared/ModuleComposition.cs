@@ -45,9 +45,10 @@ namespace NB12.Boilerplate.Host.Shared
 
         public static IEndpointModule[] EndpointModules() => _endpointModules;
 
-        public static IServiceModule[] ServiceModules() => _coreServiceModules;
+        // TODO: DELETE?
+        //public static IServiceModule[] ServiceModules() => _coreServiceModules;
 
-        public static IReadOnlyList<IServiceModule> ApiServiceModules() => _apiOnlyServiceModules;
+        //public static IReadOnlyList<IServiceModule> ApiServiceModules() => _apiOnlyServiceModules;
 
 
         public static Assembly[] AssembliesForApiScanning()
@@ -65,14 +66,14 @@ namespace NB12.Boilerplate.Host.Shared
             return serviceAssemblies.Distinct().ToArray();
         }
 
+        // TODO: DELETE?
+        //public static Assembly[] RegistryAssembliesForApi()
+        //{
+        //    var baseAssemblies = ServiceAndApplicationAssemblies(ServicesForApi());
+        //    var extraAssemblies = AdditionalAssemblies(ServicesForApi());
 
-        public static Assembly[] RegistryAssembliesForApi()
-        {
-            var baseAssemblies = ServiceAndApplicationAssemblies(ServicesForApi());
-            var extraAssemblies = AdditionalAssemblies(ServicesForApi());
-
-            return baseAssemblies.Concat(extraAssemblies).Distinct().ToArray();
-        }
+        //    return baseAssemblies.Concat(extraAssemblies).Distinct().ToArray();
+        //}
 
 
         public static Assembly[] RegistryAssembliesForWorker()

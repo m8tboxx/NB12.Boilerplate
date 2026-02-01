@@ -7,7 +7,9 @@ using NB12.Boilerplate.BuildingBlocks.Domain.Serialization;
 using NB12.Boilerplate.BuildingBlocks.Infrastructure.Auditing;
 using NB12.Boilerplate.BuildingBlocks.Infrastructure.Auth;
 using NB12.Boilerplate.BuildingBlocks.Infrastructure.Eventing;
-using System.Text.Json;
+using NB12.Boilerplate.BuildingBlocks.Application.Eventing.Integration.Admin;
+using NB12.Boilerplate.BuildingBlocks.Infrastructure.Inbox;
+using NB12.Boilerplate.BuildingBlocks.Infrastructure.Outbox;
 
 namespace NB12.Boilerplate.BuildingBlocks.Infrastructure
 {
@@ -36,6 +38,10 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure
             services.AddSingleton(_ => AppJsonSerializerOptions.Create());
             services.AddSingleton<CompositeDomainEventToIntegrationEventMapper>();
             services.AddSingleton<DomainEventsOutboxInterceptor>();
+
+            // Admin-Resolvers MUST be scoped (otherwise: scoped from root provider)
+            services.AddScoped<IOutboxAdminStoreResolver, OutboxAdminStoreResolver>();
+            services.AddScoped<IInboxAdminStoreResolver, InboxAdminStoreResolver>();
 
             return services;
         }

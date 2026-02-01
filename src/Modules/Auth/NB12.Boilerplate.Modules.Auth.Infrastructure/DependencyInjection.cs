@@ -117,13 +117,13 @@ namespace NB12.Boilerplate.Modules.Auth.Infrastructure
             services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
             services.AddScoped<IUserProfileRepository, UserProfileRepository>();
             services.AddScoped<IPermissionRepository, PermissionRepository>();
-            services.AddScoped<IOutboxAdminRepository, OutboxAdminRepository>();
             services.AddScoped<IUnitOfWork, UnitOfWork>();
 
             // Seeding
             services.AddScoped<AuthSeeder>();
 
             services.AddOutboxForModule<AuthDbContext>(AuthModule.Key);
+            services.AddOutboxAdminForModule<AuthDbContext>(AuthModule.Key);
 
             return services;
         }

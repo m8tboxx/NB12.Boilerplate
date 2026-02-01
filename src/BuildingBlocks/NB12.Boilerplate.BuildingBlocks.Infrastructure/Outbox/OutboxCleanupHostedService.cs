@@ -16,14 +16,14 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Outbox
     {
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            var opt = options.Get(moduleKey);
-            if (!opt.Enabled) return;
-
-            var delay = TimeSpan.FromMinutes(Math.Max(1, opt.RunEveryMinutes));
-            var batch = Math.Max(1, opt.BatchSize);
-
             while (!stoppingToken.IsCancellationRequested)
             {
+                var opt = options.Get(moduleKey);
+                if (!opt.Enabled) return;
+
+                var delay = TimeSpan.FromMinutes(Math.Max(1, opt.RunEveryMinutes));
+                var batch = Math.Max(1, opt.BatchSize);
+
                 try
                 {
                     await using var db = await dbFactory.CreateDbContextAsync(stoppingToken);

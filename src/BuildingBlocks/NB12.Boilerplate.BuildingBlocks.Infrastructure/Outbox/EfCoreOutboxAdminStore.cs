@@ -51,7 +51,7 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Outbox
                     x.DeadLetterReason))
                 .ToListAsync(ct);
 
-            return new PagedResponse<OutboxAdminMessageDto>(items, page.Page, page.PageSize, total);
+            return new PagedResponse<OutboxAdminMessageDto>(items, pr.Page, pr.PageSize, total);
         }
 
 
@@ -66,6 +66,8 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Outbox
         {
             await using var db = await _dbFactory.CreateDbContextAsync(ct);
 
+            var pr = page.Normalize(defaultSize: 50, maxSize: 500);
+
             IQueryable<OutboxMessage> q = db.Set<OutboxMessage>().AsNoTracking();
             q = ApplyFilters(q, fromUtc, toUtc, type, state);
             var total = await q.LongCountAsync(ct);
@@ -73,8 +75,8 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Outbox
             q = ApplySort(q, sort);
 
             var items = await q
-                .Skip(page.Skip)
-                .Take(page.PageSize)
+                .Skip(pr.Skip)
+                .Take(pr.PageSize)
                 .Select(x => new OutboxAdminMessageDetailsDto(
                     x.Id.Value,
                     x.OccurredAtUtc,
@@ -89,7 +91,7 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Outbox
                     x.DeadLetterReason))
                 .ToListAsync(ct);
 
-            return new PagedResponse<OutboxAdminMessageDetailsDto>(items, page.Page, page.PageSize, total);
+            return new PagedResponse<OutboxAdminMessageDetailsDto>(items, pr.Page, pr.PageSize, total);
         }
 
 

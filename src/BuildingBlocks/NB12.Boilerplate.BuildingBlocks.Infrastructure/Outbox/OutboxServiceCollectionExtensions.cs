@@ -18,8 +18,10 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Outbox
                 throw new ArgumentException("Module key must be provided.", nameof(moduleKey));
 
             // Store (producer-side)
-            services.AddScoped<IModuleOutboxStore>(sp =>
-                new EfCoreOutboxStore<TDbContext>(sp.GetRequiredService<IDbContextFactory<TDbContext>>(), moduleKey));
+            services.AddSingleton<IModuleOutboxStore>(sp =>
+                new EfCoreOutboxStore<TDbContext>(
+                    sp.GetRequiredService<IDbContextFactory<TDbContext>>(), 
+                    moduleKey));
 
             return services;
         }

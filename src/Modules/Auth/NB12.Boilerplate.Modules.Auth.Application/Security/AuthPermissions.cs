@@ -16,11 +16,6 @@ namespace NB12.Boilerplate.Modules.Auth.Application.Security
 
             public const string MeRead = "auth.me.read";
 
-            // Outbox Admin
-            public const string OutboxRead = "auth.outbox.read";
-            public const string OutboxReplay = "auth.outbox.replay";
-            public const string OutboxDelete = "auth.outbox.delete";
-
             // Ops / Operational Dashboard
             public const string OpsRead = "ops.read";
             public const string OpsWrite = "ops.write";

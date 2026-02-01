@@ -276,7 +276,7 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Inbox
             return await db.Database.ExecuteSqlRawAsync(
                 sql,
                 new NpgsqlParameter("before", beforeUtc),
-                new NpgsqlParameter("limit", maxRows),
+                new NpgsqlParameter("limit", prunedMax),
                 ct);
         }
 

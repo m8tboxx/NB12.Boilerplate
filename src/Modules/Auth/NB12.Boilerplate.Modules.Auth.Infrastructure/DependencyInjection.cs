@@ -7,6 +7,7 @@ using Microsoft.IdentityModel.Tokens;
 using NB12.Boilerplate.BuildingBlocks.Application.Security;
 using NB12.Boilerplate.BuildingBlocks.Infrastructure.Auditing;
 using NB12.Boilerplate.BuildingBlocks.Infrastructure.Eventing;
+using NB12.Boilerplate.BuildingBlocks.Infrastructure.Health;
 using NB12.Boilerplate.BuildingBlocks.Infrastructure.Outbox;
 using NB12.Boilerplate.BuildingBlocks.Infrastructure.Persistence;
 using NB12.Boilerplate.Modules.Auth.Application.Abstractions;
@@ -62,6 +63,8 @@ namespace NB12.Boilerplate.Modules.Auth.Infrastructure
                     options.AddInterceptors(sp.GetRequiredService<AuditSaveChangesInterceptor>());
                     options.AddInterceptors(sp.GetRequiredService<DomainEventsOutboxInterceptor>());
                 });
+
+            services.AddEfCoreDbReadinessCheck<AuthDbContext>(name: "db:auth");
 
             services.AddIdentityCore<ApplicationUser>(options =>
             {

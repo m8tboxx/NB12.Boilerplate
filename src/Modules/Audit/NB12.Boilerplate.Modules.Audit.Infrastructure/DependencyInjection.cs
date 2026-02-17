@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using NB12.Boilerplate.BuildingBlocks.Application.Interfaces;
+using NB12.Boilerplate.BuildingBlocks.Infrastructure.Health;
 using NB12.Boilerplate.BuildingBlocks.Infrastructure.Inbox;
 using NB12.Boilerplate.BuildingBlocks.Infrastructure.Persistence;
 using NB12.Boilerplate.Modules.Audit.Application.Interfaces;
@@ -25,6 +26,8 @@ namespace NB12.Boilerplate.Modules.Audit.Infrastructure
             services.AddNpgsqlDbContextFactoryAndScopedContext<AuditDbContext>(
                 connetctionString,
                 configure: (_, __) => { });
+
+            services.AddEfCoreDbReadinessCheck<AuditDbContext>(name: "db:audit");
 
             services.AddScoped<IAuditReadRepository, AuditReadRepository>();
             services.AddScoped<IAuditLogWriter, EfCoreAuditLogWriter>();

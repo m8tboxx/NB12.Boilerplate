@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NB12.Boilerplate.BuildingBlocks.Application.Eventing.Integration;
 using NB12.Boilerplate.BuildingBlocks.Infrastructure.Persistence;
+using System.Diagnostics;
 
 namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Outbox
 {
@@ -14,12 +15,19 @@ namespace NB12.Boilerplate.BuildingBlocks.Infrastructure.Outbox
         ILogger<OutboxCleanupHostedService<TDbContext>> logger) : BackgroundService
         where TDbContext : DbContext
     {
+        private static readonly TimeSpan DisabledPollDelay = TimeSpan.FromSeconds(30);
+
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             while (!stoppingToken.IsCancellationRequested)
             {
                 var opt = options.Get(moduleKey);
-                if (!opt.Enabled) return;
+
+                if (!opt.Enabled)
+                {
+                    await Task.Delay(DisabledPollDelay, stoppingToken);
+                    continue;
+                }
 
                 var delay = TimeSpan.FromMinutes(Math.Max(1, opt.RunEveryMinutes));
                 var batch = Math.Max(1, opt.BatchSize);

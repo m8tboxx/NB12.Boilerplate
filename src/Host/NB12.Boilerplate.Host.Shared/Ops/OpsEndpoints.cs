@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using NB12.Boilerplate.BuildingBlocks.Api.Modularity;
 using NB12.Boilerplate.BuildingBlocks.Application.Enums;
 using NB12.Boilerplate.BuildingBlocks.Application.Eventing.Integration.Admin;
+using NB12.Boilerplate.BuildingBlocks.Application.Health;
 using NB12.Boilerplate.BuildingBlocks.Application.Querying;
 using NB12.Boilerplate.Host.Shared.Ops.Dtos;
 using NB12.Boilerplate.Modules.Audit.Application.Interfaces;
@@ -371,15 +372,21 @@ namespace NB12.Boilerplate.Host.Shared.Ops
         }
 
 
-        private static async Task<IResult> RetentionConfig([FromServices] IAuditRetentionConfigProvider provider, CancellationToken ct)
-            => Results.Ok(await provider.GetAsync(ct));
+        private static async Task<IResult> RetentionConfig(
+            [FromServices] IAuditRetentionConfigProvider provider, 
+            CancellationToken ct)
+                => Results.Ok(await provider.GetAsync(ct));
 
 
-        private static async Task<IResult> RetentionStatus([FromServices] IAuditRetentionStatusProvider provider, CancellationToken ct)
-            => Results.Ok(await provider.GetAsync(ct));
+        private static async Task<IResult> RetentionStatus(
+            [FromServices] IAuditRetentionStatusProvider provider, 
+            CancellationToken ct)
+                => Results.Ok(await provider.GetAsync(ct));
 
 
-        private static async Task<IResult> RetentionRunNow([FromServices] IAuditRetentionService svc, CancellationToken ct)
+        private static async Task<IResult> RetentionRunNow(
+            [FromServices] IAuditRetentionService svc, 
+            CancellationToken ct)
         {
             await svc.RunOnceAsync(ct);
             return Results.Accepted();
@@ -393,15 +400,57 @@ namespace NB12.Boilerplate.Host.Shared.Ops
                 Checks: Array.Empty<OpsHealthCheckDto>()));
 
 
-        private static async Task<IResult> Ready(HttpContext http, CancellationToken ct)
+        private static async Task<IResult> Ready(
+            HttpContext http,
+            [FromServices] IEnumerable<IReadinessCheck> checks,
+            CancellationToken ct)
         {
-            // If your ready-check uses DbContexts, keep it lightweight or do it in dedicated endpoints.
-            // For now: ready == live (you can extend later).
-            await Task.CompletedTask;
-            return Results.Ok(new OpsHealthResponseDto(
-                Status: "ready",
+            var list = checks as IReadOnlyCollection<IReadinessCheck> ?? checks.ToArray();
+
+            if (list.Count == 0)
+            {
+                return Results.Ok(new OpsHealthResponseDto(
+                    Status: "ready",
+                    UtcNow: DateTime.UtcNow,
+                    Checks: Array.Empty<OpsHealthCheckDto>()));
+            }
+
+            var tasks = list.Select(async c =>
+            {
+                var res = await c.CheckAsync(ct);
+                return new OpsHealthCheckDto(
+                    Name: c.Name,
+                    Status: res.IsHealthy ? "ok" : "fail",
+                    Detail: res.Detail);
+            }).ToArray();
+
+            OpsHealthCheckDto[] results;
+            try
+            {
+                results = await Task.WhenAll(tasks);
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                return Results.Json(
+                    new OpsHealthResponseDto(
+                        Status: "not_ready",
+                        UtcNow: DateTime.UtcNow,
+                        Checks: new[] { new OpsHealthCheckDto("readiness", "fail", "Request cancelled.") }),
+                    statusCode: StatusCodes.Status503ServiceUnavailable);
+            }
+
+            var allOk = results.All(r => r.Status == "ok");
+            var status = allOk ? "ready" : "not_ready";
+
+            var dto = new OpsHealthResponseDto(
+                Status: status,
                 UtcNow: DateTime.UtcNow,
-                Checks: Array.Empty<OpsHealthCheckDto>()));
+                Checks: results);
+
+            if (allOk)
+                return Results.Ok(dto);
+
+            return Results.Json(dto, statusCode: StatusCodes.Status503ServiceUnavailable);
         }
 
 

@@ -26,18 +26,6 @@ namespace NB12.Boilerplate.Modules.Audit.Infrastructure.Services
             _state = state;
         }
 
-        public AuditRetentionConfigDto GetConfig()
-        {
-            var o = _options.CurrentValue;
-            _state.SetEnabled(o.Enabled);
-
-            return new AuditRetentionConfigDto(
-                o.Enabled,
-                o.RunEveryMinutes,
-                o.RetainAuditLogsDays,
-                o.RetainErrorLogsDays);
-        }
-
         public async Task<AuditRetentionCleanupResultDto> RunCleanupAsync(DateTime utcNow, CancellationToken ct)
         {
             var opts = _options.CurrentValue;

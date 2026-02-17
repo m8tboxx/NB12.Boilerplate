@@ -5,12 +5,12 @@ using NB12.Boilerplate.Modules.Audit.Application.Responses;
 
 namespace NB12.Boilerplate.Modules.Audit.Infrastructure.Services
 {
-    internal sealed class AuditRetentionConfigProvider(IOptions<AuditRetentionOptions> options)
+    internal sealed class AuditRetentionConfigProvider(IOptionsMonitor<AuditRetentionOptions> options)
         : IAuditRetentionConfigProvider
     {
         public Task<AuditRetentionConfigDto> GetAsync(CancellationToken ct)
         {
-            var o = options.Value;
+            var o = options.CurrentValue;
 
             var dto = new AuditRetentionConfigDto(
                 Enabled: o.Enabled,

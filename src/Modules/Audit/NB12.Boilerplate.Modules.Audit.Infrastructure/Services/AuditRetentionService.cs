@@ -133,8 +133,11 @@ namespace NB12.Boilerplate.Modules.Audit.Infrastructure.Services
 
                 var affected = await _db.Database.ExecuteSqlRawAsync(
                     sql,
-                    new NpgsqlParameter("cutoff", cutoffUtc),
-                    new NpgsqlParameter("limit", limit),
+                    new object[]
+                    {
+                         new NpgsqlParameter("cutoff", cutoffUtc),
+                         new NpgsqlParameter("limit", limit)
+                    },
                     ct);
 
                 deletedTotal += affected;
